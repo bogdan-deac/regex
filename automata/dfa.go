@@ -38,6 +38,10 @@ func (dfa *DFA[T]) Accepts(input []Symbol) bool {
 			return false
 		}
 		currentState = dfa.Delta[currentState][symbol]
+		// if any transition leads to the sink state, break early - no match
+		if dfa.SinkState != nil && currentState == *dfa.SinkState {
+			return false
+		}
 	}
 	return dfa.FinalStates.Contains(currentState)
 }

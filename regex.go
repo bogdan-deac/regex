@@ -197,7 +197,6 @@ func (c Cat) Compile(gen generator.Generator[int]) *automata.NFA[int] {
 		Delta:              delta,
 		EpsilonTransitions: epsilonTransitions,
 	}
-
 }
 
 type Maybe struct {

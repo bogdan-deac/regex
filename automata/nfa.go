@@ -74,6 +74,7 @@ func (nfa *NFA[T]) MapStates(f func(T) T) {
 	nfa.EpsilonTransitions = newEpsilonTransions
 }
 
+// build epsilon closures for each state. Each epsilon closure contains the originating state
 func (nfa *NFA[T]) EpsilonClosures() map[T]set.Set[T] {
 	epsilonClosures := make(map[T]set.Set[T], len(nfa.EpsilonTransitions))
 	for _, state := range nfa.AllStates.ToSlice() {
@@ -88,6 +89,7 @@ func (nfa *NFA[T]) EpsilonClosures() map[T]set.Set[T] {
 		for toCheck.Size() > 0 {
 			next, _ := toCheck.Dequeue()
 			visitedNodes[next] = struct{}{}
+			// iteratively build epsilon closure for all states that are reachable via epsilon transitions
 			for _, t := range nfa.EpsilonTransitions[next] {
 				if _, visited := visitedNodes[t]; !visited {
 					epsilonClosures[state].Add(t)
@@ -103,6 +105,8 @@ func (nfa *NFA[T]) EpsilonClosures() map[T]set.Set[T] {
 // implemented using the subset construction algorithm
 func (nfa *NFA[T]) ToDFA(g generator.Generator[T]) *DFA[T] {
 	epsClosures := nfa.EpsilonClosures()
+
+	// use a trie for generating DFA states for sets of NFA states
 	stateTrie := trie.NewTrie[T, T]()
 
 	dfaAllStates := set.NewSet[T]()
@@ -117,13 +121,16 @@ func (nfa *NFA[T]) ToDFA(g generator.Generator[T]) *DFA[T] {
 
 	dfaInitialState := mergedState(stateTrie, sliceISWC, g)
 	dfaAllStates.Add(dfaInitialState)
-	if !initialStateWithClosure.Intersect(nfa.FinalStates).IsEmpty() {
+
+	// if any state in the epsilon-closed set, add the newly generated state to the final states as well
+	if nfa.FinalStates.ContainsAny(sliceISWC...) {
 		dfaFinalStates.Add(dfaInitialState)
 	}
 
 	var leadsToSink bool
 	var mergedStateValue T
 
+	// use queue for keeping track of subsets of states
 	toProcess := queue.NewQueue(sliceISWC)
 
 	for toProcess.Size() > 0 {
@@ -155,6 +162,7 @@ func (nfa *NFA[T]) ToDFA(g generator.Generator[T]) *DFA[T] {
 				stateSlice := allTransitionsWithEps.ToSlice()
 				slices.Sort(stateSlice)
 
+				// if the set of states has already been processed - don't requeue it
 				processedV := stateTrie.Lookup(stateSlice)
 				if processedV == nil {
 					toProcess.Enqueue(stateSlice)
@@ -162,20 +170,27 @@ func (nfa *NFA[T]) ToDFA(g generator.Generator[T]) *DFA[T] {
 
 				mergedStateValue = mergedState(stateTrie, stateSlice, g)
 
+				// add newly generated state to all states
 				dfaAllStates.Add(mergedStateValue)
+
+				// add to final states if the set contains any final state
 				if nfa.FinalStates.ContainsAny(stateSlice...) {
 					dfaFinalStates.Add(mergedStateValue)
 				}
+
 				if _, ok := dfaDelta[mergedStateValue]; !ok {
 					dfaDelta[mergedStateValue] = make(map[Symbol]T)
 				}
+				// create transition from origin to newly generated state
 				dfaDelta[originState][symbol] = mergedStateValue
 			}
 		}
 	}
 
+	// add sink state logic
 	SinkState := g.Generate()
 
+	// create sink state transitions if necessary
 	dfaAllStates.Each(func(state T) bool {
 		if state == SinkState {
 			return false
@@ -194,6 +209,7 @@ func (nfa *NFA[T]) ToDFA(g generator.Generator[T]) *DFA[T] {
 		return false
 	})
 
+	// add sink state if any transition has been created
 	var dfaSinkState *T
 	if leadsToSink {
 		dfaAllStates.Add(SinkState)
