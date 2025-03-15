@@ -9,6 +9,7 @@ const (
 	LParen
 	RParen
 	Star
+	Plus
 	Maybe
 	Or
 	End
@@ -44,6 +45,8 @@ func (l *Lexer) NextToken() (Token, error) {
 		return mkOpToken(RParen), nil
 	case '*':
 		return mkOpToken(Star), nil
+	case '+':
+		return mkOpToken(Plus), nil
 	case '|':
 		return mkOpToken(Or), nil
 	case '\\':
@@ -71,6 +74,8 @@ func (l *Lexer) Peek() (Token, error) {
 		return mkOpToken(RParen), nil
 	case '*':
 		return mkOpToken(Star), nil
+	case '+':
+		return mkOpToken(Plus), nil
 	case '?':
 		return mkOpToken(Maybe), nil
 	case '|':
@@ -95,6 +100,8 @@ func mkOpToken(t TokenType) Token {
 		return Token{Type: t, Value: ')'}
 	case Star:
 		return Token{Type: t, Value: '*'}
+	case Plus:
+		return Token{Type: t, Value: '+'}
 	case Maybe:
 		return Token{Type: t, Value: '?'}
 	case Or:

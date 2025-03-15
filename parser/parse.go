@@ -29,6 +29,7 @@ func NewParser() *Parser {
 	p.RegisterInfix(LParen, CatParselet{})
 
 	p.RegisterPostfix(Star, StarParselet{})
+	p.RegisterPostfix(Plus, PlusParselet{})
 	p.RegisterPostfix(Maybe, MaybeParselet{})
 	return p
 }

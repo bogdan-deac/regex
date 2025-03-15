@@ -58,6 +58,14 @@ func TestRegex(t *testing.T) {
 			regexS:     "aa?",
 			mustAccept: []string{"a", "aa"},
 		},
+		{
+			regexS:     "a+",
+			mustAccept: []string{"a", "aa", "aaa", "aaaa"},
+		},
+		{
+			regexS:     "(a)+",
+			mustAccept: []string{"a", "aa", "aaa", "aaaa"},
+		},
 	}
 	p := parser.NewParser()
 	for _, tc := range tt {

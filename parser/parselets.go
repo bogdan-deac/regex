@@ -83,6 +83,16 @@ func (StarParselet) Parse(p *Parser, left regex.Regex, t Token) (regex.Regex, er
 	return regex.Star{Subexp: left}, nil
 }
 
+type PlusParselet struct{}
+
+func (PlusParselet) Parse(p *Parser, left regex.Regex, t Token) (regex.Regex, error) {
+	_ = p.ConsumeToken(mkOpToken(Plus))
+	if left == nil {
+		return nil, errors.New("Detected plus operator without argument")
+	}
+	return regex.Plus{Subexp: left}, nil
+}
+
 type MaybeParselet struct{}
 
 func (MaybeParselet) Parse(p *Parser, left regex.Regex, t Token) (regex.Regex, error) {

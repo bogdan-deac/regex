@@ -16,9 +16,13 @@ const (
 	CatOp
 	OrOp
 	StarOp
+	PlusOp
 	MaybeOp
-	EndOp
 )
+
+//---------------------------
+//   Thompson's algorithm
+//---------------------------
 
 type Regex interface {
 	Opcode() Opcode
@@ -113,6 +117,38 @@ func (s Star) Compile(gen generator.Generator[int]) *automata.NFA[int] {
 	}
 
 	epsilonTransitions[intialState] = append(epsilonTransitions[intialState], finalState, subNfa.IntialState)
+	for fs := range subNfa.FinalStates.Iter() {
+		epsilonTransitions[fs] = append(epsilonTransitions[fs], finalState, subNfa.IntialState)
+	}
+
+	return &automata.NFA[int]{
+		IntialState:        intialState,
+		FinalStates:        mapset.NewSet(finalState),
+		AllStates:          allStates.Union(subNfa.AllStates),
+		Alphabet:           subNfa.Alphabet,
+		Delta:              subNfa.Delta,
+		EpsilonTransitions: epsilonTransitions,
+	}
+}
+
+type Plus struct {
+	Subexp Regex
+}
+
+func (Plus) Opcode() Opcode { return PlusOp }
+
+func (p Plus) Compile(gen generator.Generator[int]) *automata.NFA[int] {
+	intialState := gen.Generate()
+	finalState := gen.Generate()
+	allStates := mapset.NewSet(intialState, finalState)
+
+	subNfa := p.Subexp.Compile(gen)
+	epsilonTransitions := maps.Clone(subNfa.EpsilonTransitions)
+	if epsilonTransitions == nil {
+		epsilonTransitions = make(map[int][]int)
+	}
+
+	epsilonTransitions[intialState] = append(epsilonTransitions[intialState], subNfa.IntialState)
 	for fs := range subNfa.FinalStates.Iter() {
 		epsilonTransitions[fs] = append(epsilonTransitions[fs], finalState, subNfa.IntialState)
 	}
