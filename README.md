@@ -15,5 +15,6 @@ Regex is a toy regex implementation based on automata theory. The pipleine has t
 * plus operator - `a+`
 * maybe operator - `a?`
 * grouping - `(a|b)*`
+* escaped characters - `\||\*`
 
 Note - in this implementation, grouping is non-capturing.
