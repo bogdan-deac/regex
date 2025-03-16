@@ -26,6 +26,7 @@ const (
 
 type Regex interface {
 	Opcode() Opcode
+	Optimize() Regex
 	Compile(generator.Generator[int]) *automata.NFA[int]
 }
 
@@ -50,6 +51,8 @@ func (c Char) Compile(gen generator.Generator[int]) *automata.NFA[int] {
 		EpsilonTransitions: nil,
 	}
 }
+
+func (c Char) Optimize() Regex { return c }
 
 type Or struct {
 	Branches []Regex
@@ -100,6 +103,21 @@ func (o Or) Compile(gen generator.Generator[int]) *automata.NFA[int] {
 	}
 }
 
+func (o Or) Optimize() Regex {
+	var newBranches []Regex
+	for _, b := range o.Branches {
+		newBranch := b.Optimize()
+		if bo, ok := newBranch.(Or); ok {
+			newBranches = append(newBranches, bo.Branches...)
+			continue
+		}
+		newBranches = append(newBranches, newBranch)
+	}
+	return Or{
+		Branches: newBranches,
+	}
+}
+
 type Star struct {
 	Subexp Regex
 }
@@ -130,6 +148,8 @@ func (s Star) Compile(gen generator.Generator[int]) *automata.NFA[int] {
 		EpsilonTransitions: epsilonTransitions,
 	}
 }
+
+func (s Star) Optimize() Regex { return s }
 
 type Plus struct {
 	Subexp Regex
@@ -162,6 +182,8 @@ func (p Plus) Compile(gen generator.Generator[int]) *automata.NFA[int] {
 		EpsilonTransitions: epsilonTransitions,
 	}
 }
+
+func (p Plus) Optimize() Regex { return p }
 
 type Cat struct {
 	Left  Regex
@@ -199,6 +221,13 @@ func (c Cat) Compile(gen generator.Generator[int]) *automata.NFA[int] {
 	}
 }
 
+func (c Cat) Optimize() Regex {
+	return Cat{
+		Left:  c.Left.Optimize(),
+		Right: c.Right.Optimize(),
+	}
+}
+
 type Maybe struct {
 	Subexp Regex
 }
@@ -229,3 +258,5 @@ func (m Maybe) Compile(gen generator.Generator[int]) *automata.NFA[int] {
 		EpsilonTransitions: epsilonTransitions,
 	}
 }
+
+func (m Maybe) Optimize() Regex { return m }
