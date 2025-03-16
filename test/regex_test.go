@@ -81,5 +81,12 @@ func TestRegex(t *testing.T) {
 		for _, s := range tc.mustAccept {
 			assert.True(t, dfa.Accepts([]automata.Symbol(s)))
 		}
+		// whatever the DFA accepts, the minDFA must also accept
+		minDfa := dfa.Minimize()
+		for _, s := range tc.mustAccept {
+			assert.True(t, minDfa.Accepts([]automata.Symbol(s)))
+		}
+		// automata theory - the min DFA should have at most the same number of states as the DFA
+		assert.True(t, dfa.AllStates.Cardinality() >= minDfa.AllStates.Cardinality())
 	}
 }
