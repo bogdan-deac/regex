@@ -37,43 +37,6 @@ func NewNFA[T cmp.Ordered](
 	}
 }
 
-func (nfa *NFA[T]) MapStates(f func(T) T) {
-	newIntialState := f(nfa.IntialState)
-	newFinalStates := set.NewSet[T]()
-	for state := range nfa.FinalStates.Iter() {
-		newFinalStates.Add(f(state))
-	}
-	newAllStates := set.NewSet[T]()
-	for state := range nfa.AllStates.Iter() {
-		newAllStates.Add(f(state))
-	}
-	newDelta := make(map[T]map[Symbol][]T)
-	for src, dest := range nfa.Delta {
-		newSrc := f(src)
-		newMap := make(map[Symbol][]T)
-		for sym, states := range dest {
-			var newStates []T
-			for _, state := range states {
-				newStates = append(newStates, f(state))
-			}
-			newMap[sym] = newStates
-		}
-		newDelta[newSrc] = newMap
-	}
-	newEpsilonTransions := make(map[T][]T)
-	for src, dests := range nfa.EpsilonTransitions {
-		var newDests []T
-		for _, dest := range dests {
-			newDests = append(newDests, f(dest))
-		}
-		newEpsilonTransions[src] = newDests
-	}
-	nfa.IntialState = newIntialState
-	nfa.FinalStates = newFinalStates
-	nfa.AllStates = newAllStates
-	nfa.EpsilonTransitions = newEpsilonTransions
-}
-
 // build epsilon closures for each state. Each epsilon closure contains the originating state
 func (nfa *NFA[T]) EpsilonClosures() map[T]set.Set[T] {
 	epsilonClosures := make(map[T]set.Set[T], len(nfa.EpsilonTransitions))
@@ -127,7 +90,7 @@ func (nfa *NFA[T]) ToDFA(g generator.Generator[T]) *DFA[T] {
 		dfaFinalStates.Add(dfaInitialState)
 	}
 
-	var leadsToSink bool
+	// var leadsToSink bool
 	var mergedStateValue T
 
 	// use queue for keeping track of subsets of states
@@ -187,47 +150,12 @@ func (nfa *NFA[T]) ToDFA(g generator.Generator[T]) *DFA[T] {
 		}
 	}
 
-	// add sink state logic
-	SinkState := g.Generate()
-
-	// create sink state transitions if necessary
-	dfaAllStates.Each(func(state T) bool {
-		if state == SinkState {
-			return false
-		}
-		_, ok := dfaDelta[state]
-		if !ok {
-			dfaDelta[state] = make(map[Symbol]T)
-		}
-
-		for symbol := range nfa.Alphabet.Iter() {
-			if _, ok := dfaDelta[state][symbol]; !ok {
-				dfaDelta[state][symbol] = SinkState
-				leadsToSink = true
-			}
-		}
-		return false
-	})
-
-	// add sink state if any transition has been created
-	var dfaSinkState *T
-	if leadsToSink {
-		dfaAllStates.Add(SinkState)
-		dfaSinkState = &SinkState
-
-		dfaDelta[SinkState] = make(map[Symbol]T)
-		for symbol := range nfa.Alphabet.Iter() {
-			dfaDelta[SinkState][symbol] = SinkState
-		}
-	}
-
 	dfa := &DFA[T]{
-		IntialState: dfaInitialState,
-		FinalStates: dfaFinalStates,
-		AllStates:   dfaAllStates,
-		Delta:       dfaDelta,
-		Alphabet:    nfa.Alphabet,
-		SinkState:   dfaSinkState,
+		InitialState: dfaInitialState,
+		FinalStates:  dfaFinalStates,
+		AllStates:    dfaAllStates,
+		Delta:        dfaDelta,
+		Alphabet:     nfa.Alphabet,
 	}
 
 	return dfa

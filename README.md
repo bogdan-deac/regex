@@ -6,6 +6,7 @@ Regex is a toy regex implementation based on automata theory. The pipleine has t
 2. Parser -> Turns the tokens into an AST. Uses Pratt parsing, which was the cleanest implementation I found for what I wanted
 3. NFA Conversion -> Turns the AST into an NFA using Thompson's algorithm
 4. DFA Conversion -> Converts the NFA into a DFA using a classic subset construction algorithm
+5. DFA Minimization -> Uses a table algorithm (Moore) - not as efficient, easier to understand and implement
 
 ## Supported features
 
