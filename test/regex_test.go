@@ -76,7 +76,8 @@ func TestRegex(t *testing.T) {
 		regex, err := p.Parse(tc.regexS)
 		assert.Nil(t, err)
 		g := generator.NewIntGenerator()
-		dfa := regex.Compile(g).ToDFA(g)
+		optimizedRegex := regex.Optimize()
+		dfa := optimizedRegex.Compile(g).ToDFA(g)
 		for _, s := range tc.mustAccept {
 			assert.True(t, dfa.Accepts([]automata.Symbol(s)))
 		}
