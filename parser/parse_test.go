@@ -3,122 +3,122 @@ package parser
 import (
 	"testing"
 
-	"github.com/bogdan-deac/regex"
+	"github.com/bogdan-deac/regex/ast"
 	"github.com/stretchr/testify/assert"
 )
 
 func TestParse(t *testing.T) {
 	tt := []struct {
 		reS            string
-		expectedResult regex.Regex
+		expectedResult ast.Regex
 	}{
 		{
 			reS:            "a",
-			expectedResult: regex.Char{Value: 'a'},
+			expectedResult: ast.Char{Value: 'a'},
 		},
 		{
 			reS: "ab",
-			expectedResult: regex.Cat{
-				Left:  regex.Char{Value: 'a'},
-				Right: regex.Char{Value: 'b'},
+			expectedResult: ast.Cat{
+				Left:  ast.Char{Value: 'a'},
+				Right: ast.Char{Value: 'b'},
 			},
 		},
 		{
 			reS: "a|b",
-			expectedResult: regex.Or{
-				Branches: []regex.Regex{
-					regex.Char{Value: 'a'},
-					regex.Char{Value: 'b'},
+			expectedResult: ast.Or{
+				Branches: []ast.Regex{
+					ast.Char{Value: 'a'},
+					ast.Char{Value: 'b'},
 				},
 			},
 		},
 		{
 			reS: "a*",
-			expectedResult: regex.Star{
-				Subexp: regex.Char{Value: 'a'},
+			expectedResult: ast.Star{
+				Subexp: ast.Char{Value: 'a'},
 			},
 		},
 		{
 			reS: "ab*",
-			expectedResult: regex.Cat{
-				Left: regex.Char{Value: 'a'},
-				Right: regex.Star{
-					Subexp: regex.Char{Value: 'b'},
+			expectedResult: ast.Cat{
+				Left: ast.Char{Value: 'a'},
+				Right: ast.Star{
+					Subexp: ast.Char{Value: 'b'},
 				},
 			},
 		},
 		{
 			reS:            "(a)",
-			expectedResult: regex.Char{Value: 'a'},
+			expectedResult: ast.Char{Value: 'a'},
 		},
 		{
 			reS: "(a|b)",
-			expectedResult: regex.Or{
-				Branches: []regex.Regex{
-					regex.Char{Value: 'a'},
-					regex.Char{Value: 'b'},
+			expectedResult: ast.Or{
+				Branches: []ast.Regex{
+					ast.Char{Value: 'a'},
+					ast.Char{Value: 'b'},
 				},
 			},
 		},
 		{
 			reS: "(a|b)*",
-			expectedResult: regex.Star{
-				Subexp: regex.Or{
-					Branches: []regex.Regex{
-						regex.Char{Value: 'a'},
-						regex.Char{Value: 'b'},
+			expectedResult: ast.Star{
+				Subexp: ast.Or{
+					Branches: []ast.Regex{
+						ast.Char{Value: 'a'},
+						ast.Char{Value: 'b'},
 					},
 				},
 			},
 		},
 		{
 			reS: "a*|b",
-			expectedResult: regex.Or{
-				Branches: []regex.Regex{
-					regex.Star{
-						Subexp: regex.Char{Value: 'a'},
+			expectedResult: ast.Or{
+				Branches: []ast.Regex{
+					ast.Star{
+						Subexp: ast.Char{Value: 'a'},
 					},
-					regex.Char{Value: 'b'},
+					ast.Char{Value: 'b'},
 				},
 			},
 		},
 		{
 			reS: "a|b*",
-			expectedResult: regex.Or{
-				Branches: []regex.Regex{
-					regex.Char{Value: 'a'},
-					regex.Star{
-						Subexp: regex.Char{Value: 'b'},
+			expectedResult: ast.Or{
+				Branches: []ast.Regex{
+					ast.Char{Value: 'a'},
+					ast.Star{
+						Subexp: ast.Char{Value: 'b'},
 					},
 				},
 			},
 		},
 		{
 			reS: "a?",
-			expectedResult: regex.Maybe{
-				Subexp: regex.Char{Value: 'a'},
+			expectedResult: ast.Maybe{
+				Subexp: ast.Char{Value: 'a'},
 			},
 		},
 		{
 			reS: "a*|b?",
-			expectedResult: regex.Or{
-				Branches: []regex.Regex{
-					regex.Star{
-						Subexp: regex.Char{Value: 'a'},
+			expectedResult: ast.Or{
+				Branches: []ast.Regex{
+					ast.Star{
+						Subexp: ast.Char{Value: 'a'},
 					},
-					regex.Maybe{
-						Subexp: regex.Char{Value: 'b'},
+					ast.Maybe{
+						Subexp: ast.Char{Value: 'b'},
 					},
 				},
 			},
 		},
 		{
 			reS: "a*b",
-			expectedResult: regex.Cat{
-				Left: regex.Star{
-					Subexp: regex.Char{Value: 'a'},
+			expectedResult: ast.Cat{
+				Left: ast.Star{
+					Subexp: ast.Char{Value: 'a'},
 				},
-				Right: regex.Char{Value: 'b'},
+				Right: ast.Char{Value: 'b'},
 			},
 		},
 	}
