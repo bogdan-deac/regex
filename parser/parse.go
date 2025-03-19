@@ -3,7 +3,7 @@ package parser
 import (
 	"errors"
 
-	"github.com/bogdan-deac/regex"
+	"github.com/bogdan-deac/regex/ast"
 )
 
 type Parser struct {
@@ -46,17 +46,17 @@ func (p *Parser) RegisterPostfix(tt TokenType, pp InfixParselet) {
 	p._mPostfix[tt] = pp
 }
 
-func (p *Parser) Parse(regexS string) (regex.Regex, error) {
+func (p *Parser) Parse(regexS string) (ast.Regex, error) {
 	lexer := NewLexer(regexS)
 	p.lexer = lexer
 	return p.parseExpression()
 }
-func (p *Parser) parseExpression() (regex.Regex, error) {
+func (p *Parser) parseExpression() (ast.Regex, error) {
 	newTok, err := p.lexer.NextToken()
 	if err != nil {
 		return nil, err
 	}
-	var leftExpr regex.Regex
+	var leftExpr ast.Regex
 	parselet, ok := p._mPrefix[newTok.Type]
 	if ok {
 		leftExpr, err = parselet.Parse(p, newTok)
