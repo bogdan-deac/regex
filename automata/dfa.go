@@ -59,11 +59,34 @@ func (dfa *DFA[T]) MapStates(f func(T) T) *DFA[T] {
 
 func (dfa *DFA[T]) Accepts(input []Symbol) bool {
 	currentState := dfa.InitialState
-	for _, symbol := range input {
-		if _, ok := dfa.Delta[currentState][symbol]; !ok {
-			return false
+	for i, symbol := range input {
+		var accepts bool
+		if nextState, ok := dfa.Delta[currentState][Wildcard]; ok {
+			if accepts = dfa.accepts(input[i+1:], nextState); accepts {
+				return true
+			}
 		}
-		currentState = dfa.Delta[currentState][symbol]
+		if nextState, ok := dfa.Delta[currentState][symbol]; ok {
+			currentState = nextState
+			continue
+		}
+		return false
+	}
+	return dfa.FinalStates.Contains(currentState)
+}
+
+func (dfa *DFA[T]) accepts(input []Symbol, initialState T) bool {
+	currentState := initialState
+	for _, symbol := range input {
+		if _, ok := dfa.Delta[currentState][symbol]; ok {
+			currentState = dfa.Delta[currentState][symbol]
+			continue
+		}
+		if _, ok := dfa.Delta[currentState][Wildcard]; ok {
+			currentState = dfa.Delta[currentState][Wildcard]
+			continue
+		}
+		return false
 	}
 	return dfa.FinalStates.Contains(currentState)
 }

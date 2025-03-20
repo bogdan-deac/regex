@@ -20,6 +20,12 @@ func (CharParselet) Parse(p *Parser, t Token) (ast.Regex, error) {
 	return ast.Char{Value: t.Value}, nil
 }
 
+type WildcardParselet struct{}
+
+func (WildcardParselet) Parse(p *Parser, t Token) (ast.Regex, error) {
+	return ast.Wildcard{}, nil
+}
+
 type GroupParselet struct{}
 
 func (GroupParselet) Parse(p *Parser, t Token) (ast.Regex, error) {

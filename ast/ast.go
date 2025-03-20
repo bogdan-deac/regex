@@ -18,6 +18,7 @@ const (
 	StarOp
 	PlusOp
 	MaybeOp
+	WildcardOp
 )
 
 //---------------------------
@@ -260,3 +261,25 @@ func (m Maybe) Compile(gen generator.Generator[int]) *automata.NFA[int] {
 }
 
 func (m Maybe) Optimize() Regex { return m }
+
+type Wildcard struct{}
+
+func (w Wildcard) Opcode() Opcode { return WildcardOp }
+
+func (w Wildcard) Compile(gen generator.Generator[int]) *automata.NFA[int] {
+	initialState := gen.Generate()
+	finalState := gen.Generate()
+	return &automata.NFA[int]{
+		IntialState: initialState,
+		FinalStates: mapset.NewSet(finalState),
+		AllStates:   mapset.NewSet(initialState, finalState),
+		Delta: map[int]map[automata.Symbol][]int{
+			initialState: {
+				automata.Wildcard: {finalState},
+			},
+		},
+		Alphabet: mapset.NewSet[automata.Symbol](automata.Wildcard),
+	}
+}
+
+func (w Wildcard) Optimize() Regex { return w }

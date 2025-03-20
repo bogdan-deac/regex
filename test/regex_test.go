@@ -70,6 +70,22 @@ func TestRegex(t *testing.T) {
 			regexS:     "\\||\\*",
 			mustAccept: []string{"|", "*"},
 		},
+		{
+			regexS:     "(a|b)*(a|b)*(a|b)*",
+			mustAccept: []string{""},
+		},
+		{
+			regexS:     ".",
+			mustAccept: []string{"a", "b", "c"},
+		},
+		{
+			regexS:     ".*",
+			mustAccept: []string{"", "a", "b", "aa", "bb"},
+		},
+		{
+			regexS:     ".|aa",
+			mustAccept: []string{"a", "b", "c", "aa"},
+		},
 	}
 	p := parser.NewParser()
 	for _, tc := range tt {
@@ -79,12 +95,12 @@ func TestRegex(t *testing.T) {
 		optimizedRegex := regex.Optimize()
 		dfa := optimizedRegex.Compile(g).ToDFA(g)
 		for _, s := range tc.mustAccept {
-			assert.True(t, dfa.Accepts([]automata.Symbol(s)))
+			assert.Truef(t, dfa.Accepts([]automata.Symbol(s)), s)
 		}
 		// whatever the DFA accepts, the minDFA must also accept
 		minDfa := dfa.Minimize()
 		for _, s := range tc.mustAccept {
-			assert.True(t, minDfa.Accepts([]automata.Symbol(s)))
+			assert.Truef(t, minDfa.Accepts([]automata.Symbol(s)), s)
 		}
 		// automata theory - the min DFA should have at most the same number of states as the DFA
 		assert.True(t, dfa.AllStates.Cardinality() >= minDfa.AllStates.Cardinality())

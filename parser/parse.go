@@ -23,10 +23,12 @@ func NewParser() *Parser {
 	}
 	p.RegisterPrefix(Char, CharParselet{})
 	p.RegisterPrefix(LParen, GroupParselet{})
+	p.RegisterPrefix(Wildcard, WildcardParselet{})
 
 	p.RegisterInfix(Or, OrParselet{})
 	p.RegisterInfix(Char, CatParselet{})
 	p.RegisterInfix(LParen, CatParselet{})
+	p.RegisterInfix(Wildcard, CatParselet{})
 
 	p.RegisterPostfix(Star, StarParselet{})
 	p.RegisterPostfix(Plus, PlusParselet{})
