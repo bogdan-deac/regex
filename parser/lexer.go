@@ -14,6 +14,7 @@ const (
 	Or
 	End
 	Error
+	Wildcard
 )
 
 type Token struct {
@@ -39,6 +40,8 @@ func (l *Lexer) NextToken() (Token, error) {
 	c := l.input[l.pos]
 	l.pos++
 	switch c {
+	case '.':
+		return mkOpToken(Wildcard), nil
 	case '(':
 		return mkOpToken(LParen), nil
 	case ')':
@@ -68,6 +71,8 @@ func (l *Lexer) Peek() (Token, error) {
 	c := l.input[l.pos]
 
 	switch c {
+	case '.':
+		return mkOpToken(Wildcard), nil
 	case '(':
 		return mkOpToken(LParen), nil
 	case ')':
@@ -94,6 +99,8 @@ func (l *Lexer) Peek() (Token, error) {
 
 func mkOpToken(t TokenType) Token {
 	switch t {
+	case Wildcard:
+		return Token{Type: t, Value: '.'}
 	case LParen:
 		return Token{Type: t, Value: '('}
 	case RParen:
