@@ -71,14 +71,6 @@ func (CatParselet) Parse(p *Parser, left ast.Regex, t Token) (ast.Regex, error) 
 	}, nil
 }
 
-// ------------------------
-//     POSTFIX PARSELETS
-// ------------------------
-
-type PostfixParselet interface {
-	Parse(*Parser, ast.Regex, Token) (ast.Regex, error)
-}
-
 type StarParselet struct{}
 
 func (StarParselet) Parse(p *Parser, left ast.Regex, t Token) (ast.Regex, error) {

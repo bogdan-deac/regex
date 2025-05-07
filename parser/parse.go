@@ -7,19 +7,18 @@ import (
 )
 
 type Parser struct {
-	lexer     *Lexer
-	_mPrefix  map[TokenType]PrefixParselet
-	_mInfix   map[TokenType]InfixParselet
-	_mPostfix map[TokenType]PostfixParselet
+	lexer    *Lexer
+	_mPrefix map[TokenType]PrefixParselet
+	_mInfix  map[TokenType]InfixParselet
 }
 
 // Pratt parsers are fantastic
 // https://journal.stuffwithstuff.com/2011/03/19/pratt-parsers-expression-parsing-made-easy/
 func NewParser() *Parser {
 	p := &Parser{
-		_mPrefix:  make(map[TokenType]PrefixParselet),
-		_mInfix:   make(map[TokenType]InfixParselet),
-		_mPostfix: make(map[TokenType]PostfixParselet),
+		_mPrefix: make(map[TokenType]PrefixParselet),
+		_mInfix:  make(map[TokenType]InfixParselet),
+		// _mPostfix: make(map[TokenType]PostfixParselet),
 	}
 	p.RegisterPrefix(Char, CharParselet{})
 	p.RegisterPrefix(LParen, GroupParselet{})
@@ -30,9 +29,9 @@ func NewParser() *Parser {
 	p.RegisterInfix(LParen, CatParselet{})
 	p.RegisterInfix(Wildcard, CatParselet{})
 
-	p.RegisterPostfix(Star, StarParselet{})
-	p.RegisterPostfix(Plus, PlusParselet{})
-	p.RegisterPostfix(Maybe, MaybeParselet{})
+	p.RegisterInfix(Star, StarParselet{})
+	p.RegisterInfix(Plus, PlusParselet{})
+	p.RegisterInfix(Maybe, MaybeParselet{})
 	return p
 }
 
@@ -44,15 +43,12 @@ func (p *Parser) RegisterInfix(tt TokenType, pp InfixParselet) {
 	p._mInfix[tt] = pp
 }
 
-func (p *Parser) RegisterPostfix(tt TokenType, pp InfixParselet) {
-	p._mPostfix[tt] = pp
-}
-
 func (p *Parser) Parse(regexS string) (ast.Regex, error) {
 	lexer := NewLexer(regexS)
 	p.lexer = lexer
 	return p.parseExpression()
 }
+
 func (p *Parser) parseExpression() (ast.Regex, error) {
 	newTok, err := p.lexer.NextToken()
 	if err != nil {
@@ -67,32 +63,22 @@ func (p *Parser) parseExpression() (ast.Regex, error) {
 		}
 	}
 
+peek:
 	token, err := p.Peek()
 	if err != nil {
 		return nil, err
 	}
-	pfParselet, ok := p._mPostfix[token.Type]
-	if ok {
-		leftExpr, err = pfParselet.Parse(p, leftExpr, newTok)
-		if err != nil {
-			return nil, err
-		}
-		token, err = p.Peek()
-		if err != nil {
-			return nil, err
-		}
-	}
 
-	infixParselet, ok := p._mInfix[token.Type]
-	if !ok {
-		return leftExpr, nil
-	}
+	for token.Type != End {
+		infixParselet, ok := p._mInfix[token.Type]
+		if !ok {
+			return leftExpr, nil
+		}
 
-	expr, err := infixParselet.Parse(p, leftExpr, token)
-	if err != nil {
-		return nil, err
+		leftExpr, err = infixParselet.Parse(p, leftExpr, token)
+		goto peek
 	}
-	return expr, nil
+	return leftExpr, nil
 }
 
 func (p *Parser) Peek() (Token, error) {
