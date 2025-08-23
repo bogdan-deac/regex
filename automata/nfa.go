@@ -6,7 +6,6 @@ import (
 	"strings"
 
 	"github.com/bogdan-deac/regex/common/generator"
-	"github.com/bogdan-deac/regex/common/trie"
 	set "github.com/deckarep/golang-set/v2"
 	queue "github.com/oleiade/lane/v2"
 )
@@ -117,7 +116,7 @@ func (nfa *NFA[T]) ToDFA(g generator.Generator[T]) *DFA[T] {
 	epsClosures := nfa.EpsilonClosures()
 	nfa.RemoveWildcards()
 	// use a trie for generating DFA states for sets of NFA states
-	stateTrie := trie.NewTrie[T, T]()
+	mergeStates := make(map[string]T)
 
 	dfaAllStates := set.NewSet[T]()
 	dfaFinalStates := set.NewSet[T]()
@@ -129,7 +128,9 @@ func (nfa *NFA[T]) ToDFA(g generator.Generator[T]) *DFA[T] {
 	sliceISWC := initialStateWithClosure.ToSlice()
 	slices.Sort(sliceISWC)
 
-	dfaInitialState := mergedState(stateTrie, sliceISWC, g)
+	dfaInitialState := g.Generate()
+	mergeStates[fmt.Sprint(sliceISWC)] = dfaInitialState
+
 	dfaAllStates.Add(dfaInitialState)
 
 	// if any state in the epsilon-closed set, add the newly generated state to the final states as well
@@ -146,7 +147,13 @@ func (nfa *NFA[T]) ToDFA(g generator.Generator[T]) *DFA[T] {
 	for toProcess.Size() > 0 {
 		currentStateSlice, _ := toProcess.Dequeue()
 		slices.Sort(currentStateSlice)
-		originState := mergedState(stateTrie, currentStateSlice, g)
+		var originState T
+		if state, ok := mergeStates[fmt.Sprint(currentStateSlice)]; ok {
+			originState = state
+		} else {
+			originState = g.Generate()
+			mergeStates[fmt.Sprint(currentStateSlice)] = originState
+		}
 		if dfaDelta[originState] == nil {
 			dfaDelta[originState] = make(map[Symbol]T)
 		}
@@ -173,12 +180,12 @@ func (nfa *NFA[T]) ToDFA(g generator.Generator[T]) *DFA[T] {
 				slices.Sort(stateSlice)
 
 				// if the set of states has already been processed - don't requeue it
-				processedV := stateTrie.Lookup(stateSlice)
-				if processedV == nil {
+				var ok bool
+				if mergedStateValue, ok = mergeStates[fmt.Sprint(stateSlice)]; !ok {
+					mergedStateValue = g.Generate()
+					mergeStates[fmt.Sprint(stateSlice)] = mergedStateValue
 					toProcess.Enqueue(stateSlice)
 				}
-
-				mergedStateValue = mergedState(stateTrie, stateSlice, g)
 
 				// add newly generated state to all states
 				dfaAllStates.Add(mergedStateValue)
@@ -206,15 +213,4 @@ func (nfa *NFA[T]) ToDFA(g generator.Generator[T]) *DFA[T] {
 	}
 
 	return dfa
-}
-
-// this function is used to merge NFA states into a DFA state
-func mergedState[T comparable](stateTrie *trie.Trie[T, T], elems []T, g generator.Generator[T]) T {
-	if v := stateTrie.Lookup(elems); v != nil {
-		return *v
-	}
-	curr := g.Generate()
-	stateTrie.Insert(elems, curr)
-	s := curr
-	return s
 }
