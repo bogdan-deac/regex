@@ -4,6 +4,7 @@ import (
 	"errors"
 
 	"github.com/bogdan-deac/regex/ast"
+	"github.com/bogdan-deac/regex/common/generator"
 )
 
 // ------------------------
@@ -12,23 +13,23 @@ import (
 //
 // ------------------------
 type PrefixParselet interface {
-	Parse(*Parser, Token) (ast.Regex, error)
+	Parse(*Parser, Token) (ast.Regex[generator.PrintableInt], error)
 }
 type CharParselet struct{}
 
-func (CharParselet) Parse(p *Parser, t Token) (ast.Regex, error) {
-	return ast.Char{Value: t.Value}, nil
+func (CharParselet) Parse(p *Parser, t Token) (ast.Regex[generator.PrintableInt], error) {
+	return ast.Char[generator.PrintableInt]{Value: t.Value}, nil
 }
 
 type WildcardParselet struct{}
 
-func (WildcardParselet) Parse(p *Parser, t Token) (ast.Regex, error) {
-	return ast.Wildcard{}, nil
+func (WildcardParselet) Parse(p *Parser, t Token) (ast.Regex[generator.PrintableInt], error) {
+	return ast.Wildcard[generator.PrintableInt]{}, nil
 }
 
 type GroupParselet struct{}
 
-func (GroupParselet) Parse(p *Parser, t Token) (ast.Regex, error) {
+func (GroupParselet) Parse(p *Parser, t Token) (ast.Regex[generator.PrintableInt], error) {
 	expr, err := p.parseExpression()
 	if err != nil {
 		return nil, err
@@ -42,30 +43,30 @@ func (GroupParselet) Parse(p *Parser, t Token) (ast.Regex, error) {
 // ------------------------
 
 type InfixParselet interface {
-	Parse(*Parser, ast.Regex, Token) (ast.Regex, error)
+	Parse(*Parser, ast.Regex[generator.PrintableInt], Token) (ast.Regex[generator.PrintableInt], error)
 }
 
 type OrParselet struct{}
 
-func (OrParselet) Parse(p *Parser, left ast.Regex, t Token) (ast.Regex, error) {
+func (OrParselet) Parse(p *Parser, left ast.Regex[generator.PrintableInt], t Token) (ast.Regex[generator.PrintableInt], error) {
 	_ = p.ConsumeToken(mkOpToken(Or))
 	right, err := p.parseExpression()
 	if err != nil {
 		return nil, err
 	}
-	return ast.Or{
-		Branches: []ast.Regex{left, right},
+	return ast.Or[generator.PrintableInt]{
+		Branches: []ast.Regex[generator.PrintableInt]{left, right},
 	}, nil
 }
 
 type CatParselet struct{}
 
-func (CatParselet) Parse(p *Parser, left ast.Regex, t Token) (ast.Regex, error) {
+func (CatParselet) Parse(p *Parser, left ast.Regex[generator.PrintableInt], t Token) (ast.Regex[generator.PrintableInt], error) {
 	right, err := p.parseExpression()
 	if err != nil {
 		return nil, err
 	}
-	return ast.Cat{
+	return ast.Cat[generator.PrintableInt]{
 		Left:  left,
 		Right: right,
 	}, nil
@@ -73,30 +74,30 @@ func (CatParselet) Parse(p *Parser, left ast.Regex, t Token) (ast.Regex, error) 
 
 type StarParselet struct{}
 
-func (StarParselet) Parse(p *Parser, left ast.Regex, t Token) (ast.Regex, error) {
+func (StarParselet) Parse(p *Parser, left ast.Regex[generator.PrintableInt], t Token) (ast.Regex[generator.PrintableInt], error) {
 	_ = p.ConsumeToken(mkOpToken(Star))
 	if left == nil {
 		return nil, errors.New("Detected star operator without argument")
 	}
-	return ast.Star{Subexp: left}, nil
+	return ast.Star[generator.PrintableInt]{Subexp: left}, nil
 }
 
 type PlusParselet struct{}
 
-func (PlusParselet) Parse(p *Parser, left ast.Regex, t Token) (ast.Regex, error) {
+func (PlusParselet) Parse(p *Parser, left ast.Regex[generator.PrintableInt], t Token) (ast.Regex[generator.PrintableInt], error) {
 	_ = p.ConsumeToken(mkOpToken(Plus))
 	if left == nil {
 		return nil, errors.New("Detected plus operator without argument")
 	}
-	return ast.Plus{Subexp: left}, nil
+	return ast.Plus[generator.PrintableInt]{Subexp: left}, nil
 }
 
 type MaybeParselet struct{}
 
-func (MaybeParselet) Parse(p *Parser, left ast.Regex, t Token) (ast.Regex, error) {
+func (MaybeParselet) Parse(p *Parser, left ast.Regex[generator.PrintableInt], t Token) (ast.Regex[generator.PrintableInt], error) {
 	_ = p.ConsumeToken(mkOpToken(Maybe))
 	if left == nil {
 		return nil, errors.New("Detected maybe operator without argument")
 	}
-	return ast.Maybe{Subexp: left}, nil
+	return ast.Maybe[generator.PrintableInt]{Subexp: left}, nil
 }

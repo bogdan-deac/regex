@@ -25,26 +25,26 @@ const (
 //   Thompson's algorithm
 //---------------------------
 
-type Regex interface {
+type Regex[T automata.StateLike] interface {
 	Opcode() Opcode
-	Optimize() Regex
-	Compile(generator.Generator[int]) *automata.NFA[int]
+	Optimize() Regex[T]
+	Compile(generator.Generator[T]) *automata.NFA[T]
 }
 
-type Char struct {
+type Char[T automata.StateLike] struct {
 	Value rune
 }
 
-func (Char) Opcode() Opcode { return CharOp }
-func (c Char) Compile(gen generator.Generator[int]) *automata.NFA[int] {
+func (Char[T]) Opcode() Opcode { return CharOp }
+func (c Char[T]) Compile(gen generator.Generator[T]) *automata.NFA[T] {
 	intialState := gen.Generate()
 	finalState := gen.Generate()
-	return &automata.NFA[int]{
+	return &automata.NFA[T]{
 		IntialState: intialState,
 		FinalStates: mapset.NewSet(finalState),
 		AllStates:   mapset.NewSet(intialState, finalState),
 		Alphabet:    mapset.NewSet(c.Value),
-		Delta: map[int]map[automata.Symbol][]int{
+		Delta: map[T]map[automata.Symbol][]T{
 			intialState: {
 				c.Value: {finalState},
 			},
@@ -53,21 +53,21 @@ func (c Char) Compile(gen generator.Generator[int]) *automata.NFA[int] {
 	}
 }
 
-func (c Char) Optimize() Regex { return c }
+func (c Char[T]) Optimize() Regex[T] { return c }
 
-type Or struct {
-	Branches []Regex
+type Or[T automata.StateLike] struct {
+	Branches []Regex[T]
 }
 
-func (Or) Opcode() Opcode { return OrOp }
-func (o Or) Compile(gen generator.Generator[int]) *automata.NFA[int] {
+func (Or[T]) Opcode() Opcode { return OrOp }
+func (o Or[T]) Compile(gen generator.Generator[T]) *automata.NFA[T] {
 	intialState := gen.Generate()
 	finalState := gen.Generate()
 	allStates := mapset.NewSet(intialState, finalState)
 	alphabet := mapset.NewSet[automata.Symbol]()
-	epsilonTransitions := make(map[int][]int)
-	delta := make(map[int]map[automata.Symbol][]int)
-	var branchInitialStates []int
+	epsilonTransitions := make(map[T][]T)
+	delta := make(map[T]map[automata.Symbol][]T)
+	var branchInitialStates []T
 
 	for _, b := range o.Branches {
 		compiledBranch := b.Compile(gen)
@@ -94,7 +94,7 @@ func (o Or) Compile(gen generator.Generator[int]) *automata.NFA[int] {
 	// add an epsilon transition from the initial state to all the final states
 	epsilonTransitions[intialState] = branchInitialStates
 
-	return &automata.NFA[int]{
+	return &automata.NFA[T]{
 		IntialState:        intialState,
 		FinalStates:        mapset.NewSet(finalState),
 		AllStates:          allStates,
@@ -104,27 +104,27 @@ func (o Or) Compile(gen generator.Generator[int]) *automata.NFA[int] {
 	}
 }
 
-func (o Or) Optimize() Regex {
-	var newBranches []Regex
+func (o Or[T]) Optimize() Regex[T] {
+	var newBranches []Regex[T]
 	for _, b := range o.Branches {
 		newBranch := b.Optimize()
-		if bo, ok := newBranch.(Or); ok {
+		if bo, ok := newBranch.(Or[T]); ok {
 			newBranches = append(newBranches, bo.Branches...)
 			continue
 		}
 		newBranches = append(newBranches, newBranch)
 	}
-	return Or{
+	return Or[T]{
 		Branches: newBranches,
 	}
 }
 
-type Star struct {
-	Subexp Regex
+type Star[T automata.StateLike] struct {
+	Subexp Regex[T]
 }
 
-func (Star) Opcode() Opcode { return StarOp }
-func (s Star) Compile(gen generator.Generator[int]) *automata.NFA[int] {
+func (Star[T]) Opcode() Opcode { return StarOp }
+func (s Star[T]) Compile(gen generator.Generator[T]) *automata.NFA[T] {
 	intialState := gen.Generate()
 	finalState := gen.Generate()
 	allStates := mapset.NewSet(intialState, finalState)
@@ -132,7 +132,7 @@ func (s Star) Compile(gen generator.Generator[int]) *automata.NFA[int] {
 	subNfa := s.Subexp.Compile(gen)
 	epsilonTransitions := maps.Clone(subNfa.EpsilonTransitions)
 	if epsilonTransitions == nil {
-		epsilonTransitions = make(map[int][]int)
+		epsilonTransitions = make(map[T][]T)
 	}
 
 	epsilonTransitions[intialState] = append(epsilonTransitions[intialState], finalState, subNfa.IntialState)
@@ -140,7 +140,7 @@ func (s Star) Compile(gen generator.Generator[int]) *automata.NFA[int] {
 		epsilonTransitions[fs] = append(epsilonTransitions[fs], finalState, subNfa.IntialState)
 	}
 
-	return &automata.NFA[int]{
+	return &automata.NFA[T]{
 		IntialState:        intialState,
 		FinalStates:        mapset.NewSet(finalState),
 		AllStates:          allStates.Union(subNfa.AllStates),
@@ -150,15 +150,15 @@ func (s Star) Compile(gen generator.Generator[int]) *automata.NFA[int] {
 	}
 }
 
-func (s Star) Optimize() Regex { return s }
+func (s Star[T]) Optimize() Regex[T] { return s }
 
-type Plus struct {
-	Subexp Regex
+type Plus[T automata.StateLike] struct {
+	Subexp Regex[T]
 }
 
-func (Plus) Opcode() Opcode { return PlusOp }
+func (Plus[T]) Opcode() Opcode { return PlusOp }
 
-func (p Plus) Compile(gen generator.Generator[int]) *automata.NFA[int] {
+func (p Plus[T]) Compile(gen generator.Generator[T]) *automata.NFA[T] {
 	intialState := gen.Generate()
 	finalState := gen.Generate()
 	allStates := mapset.NewSet(intialState, finalState)
@@ -166,7 +166,7 @@ func (p Plus) Compile(gen generator.Generator[int]) *automata.NFA[int] {
 	subNfa := p.Subexp.Compile(gen)
 	epsilonTransitions := maps.Clone(subNfa.EpsilonTransitions)
 	if epsilonTransitions == nil {
-		epsilonTransitions = make(map[int][]int)
+		epsilonTransitions = make(map[T][]T)
 	}
 
 	epsilonTransitions[intialState] = append(epsilonTransitions[intialState], subNfa.IntialState)
@@ -174,7 +174,7 @@ func (p Plus) Compile(gen generator.Generator[int]) *automata.NFA[int] {
 		epsilonTransitions[fs] = append(epsilonTransitions[fs], finalState, subNfa.IntialState)
 	}
 
-	return &automata.NFA[int]{
+	return &automata.NFA[T]{
 		IntialState:        intialState,
 		FinalStates:        mapset.NewSet(finalState),
 		AllStates:          allStates.Union(subNfa.AllStates),
@@ -184,18 +184,18 @@ func (p Plus) Compile(gen generator.Generator[int]) *automata.NFA[int] {
 	}
 }
 
-func (p Plus) Optimize() Regex { return p }
+func (p Plus[T]) Optimize() Regex[T] { return p }
 
-type Cat struct {
-	Left  Regex
-	Right Regex
+type Cat[T automata.StateLike] struct {
+	Left  Regex[T]
+	Right Regex[T]
 }
 
-func (Cat) Opcode() Opcode { return CatOp }
-func (c Cat) Compile(gen generator.Generator[int]) *automata.NFA[int] {
+func (Cat[T]) Opcode() Opcode { return CatOp }
+func (c Cat[T]) Compile(gen generator.Generator[T]) *automata.NFA[T] {
 	lc := c.Left.Compile(gen)
 	rc := c.Right.Compile(gen)
-	allStates := mapset.NewSet[int]().Union(lc.AllStates).Union(rc.AllStates)
+	allStates := mapset.NewSet[T]().Union(lc.AllStates).Union(rc.AllStates)
 	alphabet := mapset.NewSet[automata.Symbol]().Union(lc.Alphabet).Union(rc.Alphabet)
 
 	delta := maps.Clone(lc.Delta)
@@ -203,7 +203,7 @@ func (c Cat) Compile(gen generator.Generator[int]) *automata.NFA[int] {
 
 	epsilonTransitions := maps.Clone(lc.EpsilonTransitions)
 	if epsilonTransitions == nil {
-		epsilonTransitions = make(map[int][]int)
+		epsilonTransitions = make(map[T][]T)
 	}
 	maps.Insert(epsilonTransitions, maps.All(rc.EpsilonTransitions))
 	for fs := range lc.FinalStates.Iter() {
@@ -212,7 +212,7 @@ func (c Cat) Compile(gen generator.Generator[int]) *automata.NFA[int] {
 		epsilonTransitions[fs] = append(epsilonTransitions[fs], rc.IntialState)
 	}
 
-	return &automata.NFA[int]{
+	return &automata.NFA[T]{
 		IntialState:        lc.IntialState,
 		FinalStates:        rc.FinalStates,
 		AllStates:          allStates,
@@ -222,19 +222,19 @@ func (c Cat) Compile(gen generator.Generator[int]) *automata.NFA[int] {
 	}
 }
 
-func (c Cat) Optimize() Regex {
-	return Cat{
+func (c Cat[T]) Optimize() Regex[T] {
+	return Cat[T]{
 		Left:  c.Left.Optimize(),
 		Right: c.Right.Optimize(),
 	}
 }
 
-type Maybe struct {
-	Subexp Regex
+type Maybe[T automata.StateLike] struct {
+	Subexp Regex[T]
 }
 
-func (Maybe) Opcode() Opcode { return MaybeOp }
-func (m Maybe) Compile(gen generator.Generator[int]) *automata.NFA[int] {
+func (Maybe[T]) Opcode() Opcode { return MaybeOp }
+func (m Maybe[T]) Compile(gen generator.Generator[T]) *automata.NFA[T] {
 	intialState := gen.Generate()
 	finalState := gen.Generate()
 	allStates := mapset.NewSet(intialState, finalState)
@@ -242,7 +242,7 @@ func (m Maybe) Compile(gen generator.Generator[int]) *automata.NFA[int] {
 	subNfa := m.Subexp.Compile(gen)
 	epsilonTransitions := maps.Clone(subNfa.EpsilonTransitions)
 	if epsilonTransitions == nil {
-		epsilonTransitions = make(map[int][]int)
+		epsilonTransitions = make(map[T][]T)
 	}
 
 	epsilonTransitions[intialState] = append(epsilonTransitions[intialState], finalState, subNfa.IntialState)
@@ -250,7 +250,7 @@ func (m Maybe) Compile(gen generator.Generator[int]) *automata.NFA[int] {
 		epsilonTransitions[fs] = append(epsilonTransitions[fs], finalState)
 	}
 
-	return &automata.NFA[int]{
+	return &automata.NFA[T]{
 		IntialState:        intialState,
 		FinalStates:        mapset.NewSet(finalState),
 		AllStates:          allStates.Union(subNfa.AllStates),
@@ -260,20 +260,20 @@ func (m Maybe) Compile(gen generator.Generator[int]) *automata.NFA[int] {
 	}
 }
 
-func (m Maybe) Optimize() Regex { return m }
+func (m Maybe[T]) Optimize() Regex[T] { return m }
 
-type Wildcard struct{}
+type Wildcard[T automata.StateLike] struct{}
 
-func (w Wildcard) Opcode() Opcode { return WildcardOp }
+func (w Wildcard[T]) Opcode() Opcode { return WildcardOp }
 
-func (w Wildcard) Compile(gen generator.Generator[int]) *automata.NFA[int] {
+func (w Wildcard[T]) Compile(gen generator.Generator[T]) *automata.NFA[T] {
 	initialState := gen.Generate()
 	finalState := gen.Generate()
-	return &automata.NFA[int]{
+	return &automata.NFA[T]{
 		IntialState: initialState,
 		FinalStates: mapset.NewSet(finalState),
 		AllStates:   mapset.NewSet(initialState, finalState),
-		Delta: map[int]map[automata.Symbol][]int{
+		Delta: map[T]map[automata.Symbol][]T{
 			initialState: {
 				automata.Wildcard: {finalState},
 			},
@@ -282,4 +282,4 @@ func (w Wildcard) Compile(gen generator.Generator[int]) *automata.NFA[int] {
 	}
 }
 
-func (w Wildcard) Optimize() Regex { return w }
+func (w Wildcard[T]) Optimize() Regex[T] { return w }
