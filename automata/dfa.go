@@ -1,13 +1,13 @@
 package automata
 
 import (
-	"cmp"
 	"fmt"
+	"strings"
 
 	set "github.com/deckarep/golang-set/v2"
 )
 
-type DFA[T cmp.Ordered] struct {
+type DFA[T StateLike] struct {
 	InitialState T
 	FinalStates  set.Set[T]
 	AllStates    set.Set[T]
@@ -15,7 +15,7 @@ type DFA[T cmp.Ordered] struct {
 	Alphabet     set.Set[Symbol]
 }
 
-func NewDFA[T cmp.Ordered](
+func NewDFA[T StateLike](
 	InitialState T,
 	FinalStates set.Set[T],
 	AllStates set.Set[T],
@@ -57,33 +57,27 @@ func (dfa *DFA[T]) MapStates(f func(T) T) *DFA[T] {
 	}
 }
 
-func (dfa *DFA[T]) Accepts(input []Symbol) bool {
-	currentState := dfa.InitialState
-	for i, symbol := range input {
-		var accepts bool
-		if nextState, ok := dfa.Delta[currentState][Wildcard]; ok {
-			if accepts = dfa.accepts(input[i+1:], nextState); accepts {
-				return true
-			}
+func (dfa *DFA[T]) String() string {
+	var sb strings.Builder
+
+	sb.WriteString(fmt.Sprintf("[Alphabet] %v\n", dfa.Alphabet.ToSlice()))
+	sb.WriteString("[Initial State] " + dfa.InitialState.String() + "\n")
+	sb.WriteString(fmt.Sprintf("[Final States] %v", dfa.FinalStates.ToSlice()) + "\n")
+	sb.WriteString(fmt.Sprintf("[ALL States] %v", dfa.AllStates.ToSlice()) + "\n")
+	for origin, mapping := range dfa.Delta {
+		for sym, dest := range mapping {
+			sb.WriteString(fmt.Sprintf("%s -> %d -> %s\n", origin.String(), sym, dest))
 		}
-		if nextState, ok := dfa.Delta[currentState][symbol]; ok {
-			currentState = nextState
-			continue
-		}
-		return false
 	}
-	return dfa.FinalStates.Contains(currentState)
+	return sb.String()
 }
 
-func (dfa *DFA[T]) accepts(input []Symbol, initialState T) bool {
-	currentState := initialState
+func (dfa *DFA[T]) Accepts(input []Symbol) bool {
+	currentState := dfa.InitialState
 	for _, symbol := range input {
-		if _, ok := dfa.Delta[currentState][symbol]; ok {
-			currentState = dfa.Delta[currentState][symbol]
-			continue
-		}
-		if _, ok := dfa.Delta[currentState][Wildcard]; ok {
-			currentState = dfa.Delta[currentState][Wildcard]
+
+		if nextState, ok := dfa.Delta[currentState][symbol]; ok {
+			currentState = nextState
 			continue
 		}
 		return false

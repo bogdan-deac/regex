@@ -4,6 +4,7 @@ import (
 	"errors"
 
 	"github.com/bogdan-deac/regex/ast"
+	"github.com/bogdan-deac/regex/common/generator"
 )
 
 type Parser struct {
@@ -43,18 +44,18 @@ func (p *Parser) RegisterInfix(tt TokenType, pp InfixParselet) {
 	p._mInfix[tt] = pp
 }
 
-func (p *Parser) Parse(regexS string) (ast.Regex, error) {
+func (p *Parser) Parse(regexS string) (ast.Regex[generator.PrintableInt], error) {
 	lexer := NewLexer(regexS)
 	p.lexer = lexer
 	return p.parseExpression()
 }
 
-func (p *Parser) parseExpression() (ast.Regex, error) {
+func (p *Parser) parseExpression() (ast.Regex[generator.PrintableInt], error) {
 	newTok, err := p.lexer.NextToken()
 	if err != nil {
 		return nil, err
 	}
-	var leftExpr ast.Regex
+	var leftExpr ast.Regex[generator.PrintableInt]
 	parselet, ok := p._mPrefix[newTok.Type]
 	if ok {
 		leftExpr, err = parselet.Parse(p, newTok)

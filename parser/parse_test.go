@@ -4,121 +4,122 @@ import (
 	"testing"
 
 	"github.com/bogdan-deac/regex/ast"
+	"github.com/bogdan-deac/regex/common/generator"
 	"github.com/stretchr/testify/assert"
 )
 
 func TestParse(t *testing.T) {
 	tt := []struct {
 		reS            string
-		expectedResult ast.Regex
+		expectedResult ast.Regex[generator.PrintableInt]
 	}{
 		{
 			reS:            "a",
-			expectedResult: ast.Char{Value: 'a'},
+			expectedResult: ast.Char[generator.PrintableInt]{Value: 'a'},
 		},
 		{
 			reS: "ab",
-			expectedResult: ast.Cat{
-				Left:  ast.Char{Value: 'a'},
-				Right: ast.Char{Value: 'b'},
+			expectedResult: ast.Cat[generator.PrintableInt]{
+				Left:  ast.Char[generator.PrintableInt]{Value: 'a'},
+				Right: ast.Char[generator.PrintableInt]{Value: 'b'},
 			},
 		},
 		{
 			reS: "a|b",
-			expectedResult: ast.Or{
-				Branches: []ast.Regex{
-					ast.Char{Value: 'a'},
-					ast.Char{Value: 'b'},
+			expectedResult: ast.Or[generator.PrintableInt]{
+				Branches: []ast.Regex[generator.PrintableInt]{
+					ast.Char[generator.PrintableInt]{Value: 'a'},
+					ast.Char[generator.PrintableInt]{Value: 'b'},
 				},
 			},
 		},
 		{
 			reS: "a*",
-			expectedResult: ast.Star{
-				Subexp: ast.Char{Value: 'a'},
+			expectedResult: ast.Star[generator.PrintableInt]{
+				Subexp: ast.Char[generator.PrintableInt]{Value: 'a'},
 			},
 		},
 		{
 			reS: "ab*",
-			expectedResult: ast.Cat{
-				Left: ast.Char{Value: 'a'},
-				Right: ast.Star{
-					Subexp: ast.Char{Value: 'b'},
+			expectedResult: ast.Cat[generator.PrintableInt]{
+				Left: ast.Char[generator.PrintableInt]{Value: 'a'},
+				Right: ast.Star[generator.PrintableInt]{
+					Subexp: ast.Char[generator.PrintableInt]{Value: 'b'},
 				},
 			},
 		},
 		{
 			reS:            "(a)",
-			expectedResult: ast.Char{Value: 'a'},
+			expectedResult: ast.Char[generator.PrintableInt]{Value: 'a'},
 		},
 		{
 			reS: "(a|b)",
-			expectedResult: ast.Or{
-				Branches: []ast.Regex{
-					ast.Char{Value: 'a'},
-					ast.Char{Value: 'b'},
+			expectedResult: ast.Or[generator.PrintableInt]{
+				Branches: []ast.Regex[generator.PrintableInt]{
+					ast.Char[generator.PrintableInt]{Value: 'a'},
+					ast.Char[generator.PrintableInt]{Value: 'b'},
 				},
 			},
 		},
 		{
 			reS: "(a|b)*",
-			expectedResult: ast.Star{
-				Subexp: ast.Or{
-					Branches: []ast.Regex{
-						ast.Char{Value: 'a'},
-						ast.Char{Value: 'b'},
+			expectedResult: ast.Star[generator.PrintableInt]{
+				Subexp: ast.Or[generator.PrintableInt]{
+					Branches: []ast.Regex[generator.PrintableInt]{
+						ast.Char[generator.PrintableInt]{Value: 'a'},
+						ast.Char[generator.PrintableInt]{Value: 'b'},
 					},
 				},
 			},
 		},
 		{
 			reS: "a*|b",
-			expectedResult: ast.Or{
-				Branches: []ast.Regex{
-					ast.Star{
-						Subexp: ast.Char{Value: 'a'},
+			expectedResult: ast.Or[generator.PrintableInt]{
+				Branches: []ast.Regex[generator.PrintableInt]{
+					ast.Star[generator.PrintableInt]{
+						Subexp: ast.Char[generator.PrintableInt]{Value: 'a'},
 					},
-					ast.Char{Value: 'b'},
+					ast.Char[generator.PrintableInt]{Value: 'b'},
 				},
 			},
 		},
 		{
 			reS: "a|b*",
-			expectedResult: ast.Or{
-				Branches: []ast.Regex{
-					ast.Char{Value: 'a'},
-					ast.Star{
-						Subexp: ast.Char{Value: 'b'},
+			expectedResult: ast.Or[generator.PrintableInt]{
+				Branches: []ast.Regex[generator.PrintableInt]{
+					ast.Char[generator.PrintableInt]{Value: 'a'},
+					ast.Star[generator.PrintableInt]{
+						Subexp: ast.Char[generator.PrintableInt]{Value: 'b'},
 					},
 				},
 			},
 		},
 		{
 			reS: "a?",
-			expectedResult: ast.Maybe{
-				Subexp: ast.Char{Value: 'a'},
+			expectedResult: ast.Maybe[generator.PrintableInt]{
+				Subexp: ast.Char[generator.PrintableInt]{Value: 'a'},
 			},
 		},
 		{
 			reS: "a*|b?",
-			expectedResult: ast.Or{
-				Branches: []ast.Regex{
-					ast.Star{
-						Subexp: ast.Char{Value: 'a'},
+			expectedResult: ast.Or[generator.PrintableInt]{
+				Branches: []ast.Regex[generator.PrintableInt]{
+					ast.Star[generator.PrintableInt]{
+						Subexp: ast.Char[generator.PrintableInt]{Value: 'a'},
 					},
-					ast.Maybe{
-						Subexp: ast.Char{Value: 'b'},
+					ast.Maybe[generator.PrintableInt]{
+						Subexp: ast.Char[generator.PrintableInt]{Value: 'b'},
 					},
 				},
 			},
 		},
 		{
 			reS: "a*b",
-			expectedResult: ast.Cat{
-				Left: ast.Star{
-					Subexp: ast.Char{Value: 'a'},
+			expectedResult: ast.Cat[generator.PrintableInt]{
+				Left: ast.Star[generator.PrintableInt]{
+					Subexp: ast.Char[generator.PrintableInt]{Value: 'a'},
 				},
-				Right: ast.Char{Value: 'b'},
+				Right: ast.Char[generator.PrintableInt]{Value: 'b'},
 			},
 		},
 	}

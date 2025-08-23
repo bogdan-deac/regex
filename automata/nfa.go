@@ -1,8 +1,9 @@
 package automata
 
 import (
-	"cmp"
+	"fmt"
 	"slices"
+	"strings"
 
 	"github.com/bogdan-deac/regex/common/generator"
 	"github.com/bogdan-deac/regex/common/trie"
@@ -10,7 +11,7 @@ import (
 	queue "github.com/oleiade/lane/v2"
 )
 
-type NFA[T cmp.Ordered] struct {
+type NFA[T StateLike] struct {
 	IntialState        T
 	FinalStates        set.Set[T]
 	AllStates          set.Set[T]
@@ -19,7 +20,7 @@ type NFA[T cmp.Ordered] struct {
 	EpsilonTransitions map[T][]T
 }
 
-func NewNFA[T cmp.Ordered](
+func NewNFA[T StateLike](
 	IntialState T,
 	FinalStates set.Set[T],
 	AllStates set.Set[T],
@@ -65,10 +66,56 @@ func (nfa *NFA[T]) EpsilonClosures() map[T]set.Set[T] {
 	return epsilonClosures
 }
 
+func (nfa *NFA[T]) String() string {
+	var sb strings.Builder
+
+	sb.WriteString(fmt.Sprintf("[Alphabet] %v\n", nfa.Alphabet.ToSlice()))
+	sb.WriteString("[Initial State] " + nfa.IntialState.String() + "\n")
+	sb.WriteString(fmt.Sprintf("[Final States] %v", nfa.FinalStates.ToSlice()) + "\n")
+	sb.WriteString(fmt.Sprintf("[ALL States] %v", nfa.AllStates.ToSlice()) + "\n")
+	sb.WriteString("[DELTA]\n")
+	for origin, mapping := range nfa.Delta {
+		for sym, dest := range mapping {
+			sb.WriteString(fmt.Sprintf("%s -> %d -> %s\n", origin.String(), sym, dest))
+		}
+	}
+	sb.WriteString("[EPS_TRANSITIONS]\n")
+	for start, end := range nfa.EpsilonTransitions {
+		sb.WriteString(fmt.Sprintf("%v -> %v", start, end) + "\n")
+	}
+	return sb.String()
+}
+
+func (nfa *NFA[T]) RemoveWildcards() {
+	nfa.Alphabet.Remove(Wildcard)
+	hasWildcard := false
+	for start, mapping := range nfa.Delta {
+		for sym, dest := range mapping {
+			if sym != Wildcard {
+				continue
+			}
+			hasWildcard = true
+			for _, alphabetSym := range ASCIIChars {
+				for _, newSt := range dest {
+					if !slices.Contains(mapping[alphabetSym], newSt) {
+						mapping[alphabetSym] = append(mapping[alphabetSym], newSt)
+					}
+				}
+				delete(mapping, sym)
+			}
+			nfa.Delta[start] = mapping
+		}
+	}
+	if hasWildcard {
+		nfa.Alphabet.Append(ASCIIChars...)
+	}
+}
+
 // implemented using the subset construction algorithm
 func (nfa *NFA[T]) ToDFA(g generator.Generator[T]) *DFA[T] {
-	epsClosures := nfa.EpsilonClosures()
 
+	epsClosures := nfa.EpsilonClosures()
+	nfa.RemoveWildcards()
 	// use a trie for generating DFA states for sets of NFA states
 	stateTrie := trie.NewTrie[T, T]()
 
@@ -105,6 +152,8 @@ func (nfa *NFA[T]) ToDFA(g generator.Generator[T]) *DFA[T] {
 		}
 		// For each symbol, for each state, we need to analyze all paths and build states accordingly
 		for symbol := range nfa.Alphabet.Iter() {
+			// build eps closures for all transitions
+			allTransitionsWithEps := set.NewSet[T]()
 			for _, state := range currentStateSlice {
 				transitions, okT := nfa.Delta[state]
 				if !okT {
@@ -116,8 +165,6 @@ func (nfa *NFA[T]) ToDFA(g generator.Generator[T]) *DFA[T] {
 					continue
 				}
 
-				// build eps closures for all transitions
-				allTransitionsWithEps := set.NewSet[T]()
 				for _, st := range symTransitions {
 					allTransitionsWithEps.Append(epsClosures[st].ToSlice()...)
 				}
