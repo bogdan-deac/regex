@@ -2,11 +2,10 @@
 
 Regex is a toy regex implementation based on automata theory. The pipleine has the following steps
 
-1. Lexer -> Processes the initial string into tokens, takes care of escaping
-2. Parser -> Turns the tokens into an AST. Uses Pratt parsing, which was the cleanest implementation I found for what I wanted
-3. NFA Conversion -> Turns the AST into an NFA using Thompson's algorithm
-4. DFA Conversion -> Converts the NFA into a DFA using a classic subset construction algorithm
-5. DFA Minimization -> Uses a table algorithm (Moore) - not as efficient, easier to understand and implement
+1. Lexing + parsing -> Implemented via a simple recursive descent parser
+2. NFA Conversion -> Turns the AST into an NFA using Thompson's algorithm
+3. DFA Conversion -> Converts the NFA into a DFA using a classic subset construction algorithm
+4. DFA Minimization -> Uses Hopcroft's algorithm
 
 ## Supported features
 
