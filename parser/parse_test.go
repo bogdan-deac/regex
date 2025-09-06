@@ -122,6 +122,43 @@ func TestParse(t *testing.T) {
 				Right: ast.Char[generator.PrintableInt]{Value: 'b'},
 			},
 		},
+		{
+			reS: "(a|b|c)",
+			expectedResult: ast.Or[generator.PrintableInt]{
+				Branches: []ast.Regex[generator.PrintableInt]{
+					ast.Or[generator.PrintableInt]{
+						Branches: []ast.Regex[generator.PrintableInt]{
+							ast.Char[generator.PrintableInt]{Value: 'a'},
+							ast.Char[generator.PrintableInt]{Value: 'b'},
+						},
+					},
+					ast.Char[generator.PrintableInt]{Value: 'c'},
+				},
+			},
+		},
+		{
+			reS: "(aa|bb|cc)",
+			expectedResult: ast.Or[generator.PrintableInt]{
+				Branches: []ast.Regex[generator.PrintableInt]{
+					ast.Or[generator.PrintableInt]{
+						Branches: []ast.Regex[generator.PrintableInt]{
+							ast.Cat[generator.PrintableInt]{
+								Left:  ast.Char[generator.PrintableInt]{Value: 'a'},
+								Right: ast.Char[generator.PrintableInt]{Value: 'a'},
+							},
+							ast.Cat[generator.PrintableInt]{
+								Left:  ast.Char[generator.PrintableInt]{Value: 'b'},
+								Right: ast.Char[generator.PrintableInt]{Value: 'b'},
+							},
+						},
+					},
+					ast.Cat[generator.PrintableInt]{
+						Left:  ast.Char[generator.PrintableInt]{Value: 'c'},
+						Right: ast.Char[generator.PrintableInt]{Value: 'c'},
+					},
+				},
+			},
+		},
 	}
 
 	p := NewParser()
