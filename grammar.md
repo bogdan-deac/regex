@@ -16,10 +16,20 @@ Quantifier   ::= "*" | "+" | "?"
 Atom         ::= Literal
                | Wildcard
                | Group
+               | Set
 
 Literal      ::= [a-zA-Z0-9]   (* or define as any non-special char *)
 
 Wildcard     ::= "."
 
 Group        ::= "(" Alt ")"
+
+Set          ::= "[ Negation? SetAtom+ "]"
+
+SetAtom      ::= Literal
+               | Range
+
+Negation     ::= "^"
+
+Range        ::= Literal "-" Literal
 ```
