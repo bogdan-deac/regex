@@ -13,6 +13,7 @@ type Regex = ast.Regex[generator.PrintableInt]
 type parser struct {
 	index      int
 	groupDepth int
+	inSet      bool
 }
 
 func NewParser() *parser {
@@ -150,31 +151,38 @@ func (p *parser) parseLiteral(s string) (Regex, error) {
 	switch s[p.index] {
 	case '*', '+', '?':
 		return nil, errors.New("found unexpected operator at index " + strconv.Itoa(p.index))
-	case '|':
-		return nil, nil
-	case '(':
+	case '|', '(', '[':
 		return nil, nil
 	case ')':
 		if p.groupDepth == 0 {
 			return nil, errors.New("found unexpected closing paren at index " + strconv.Itoa(p.index))
 		}
 		return nil, nil
+	case ']':
+		if !p.inSet {
+			return nil, errors.New("found unexpected closing square bracket at index " + strconv.Itoa(p.index))
+		}
+		return nil, nil
 	case '.':
+		p.index++
 		return ast.Wildcard[generator.PrintableInt]{}, nil
 	case '\\':
-		p.index++
 		if len(s) <= p.index {
 			return nil, errors.New("found escape operator without argument at index" + strconv.Itoa(p.index))
 		}
+
+		p.index++
 		fallthrough
 	default:
-
+		val := rune(s[p.index])
+		p.index++
 		return ast.Char[generator.PrintableInt]{
 			// TBD unicode suport
-			Value: rune(s[p.index]),
+			Value: val,
 		}, nil
 	}
 }
+
 func (p *parser) parseAtom(s string) (Regex, error) {
 	// attempt parsing a literal
 	regex, err := p.parseLiteral(s)
@@ -182,7 +190,6 @@ func (p *parser) parseAtom(s string) (Regex, error) {
 		return nil, err
 	}
 	if regex != nil {
-		p.index++
 		return regex, nil
 	}
 
@@ -191,6 +198,69 @@ func (p *parser) parseAtom(s string) (Regex, error) {
 	if err != nil {
 		return nil, err
 	}
+	if regex != nil {
+		return regex, nil
+	}
+
+	regex, err = p.parseSet(s)
+	if err != nil {
+		return nil, err
+	}
+
+	return regex, nil
+}
+func (p *parser) parseSet(s string) (Regex, error) {
+	if p.index < len(s) && s[p.index] == '[' {
+		p.inSet = true
+		p.index++
+
+		if p.index < len(s) && s[p.index] == '^' {
+			return nil, errors.New("negated character sets are not yet implemented")
+		}
+
+		regex, err := p.parseSetAtom(s)
+		if err != nil {
+			return nil, err
+		}
+		or := ast.Or[generator.PrintableInt]{
+			Branches: []ast.Regex[generator.PrintableInt]{
+				regex,
+			},
+		}
+		for {
+			newRegex, err := p.parseSetAtom(s)
+			if err != nil {
+				return nil, err
+			}
+			if newRegex != nil {
+				or.Branches = append(or.Branches, newRegex)
+			}
+			if p.index < len(s) && s[p.index] == ']' {
+				p.inSet = false
+				p.index++
+				break
+			}
+		}
+		return or, nil
+	}
+
+	return nil, nil
+}
+
+func (p *parser) parseSetAtom(s string) (Regex, error) {
+	regex, err := p.parseLiteral(s)
+	if err != nil {
+		return nil, err
+	}
+	if regex != nil {
+		return regex, nil
+	}
+
+	// Ranges are not yet implemented
+	// regex, err = p.parseRange(s)
+	// if err != nil {
+	// 	return nil, err
+	// }
 
 	return regex, nil
 }

@@ -106,6 +106,14 @@ func TestRegex(t *testing.T) {
 			regexS:     `a|b|c|aa|bb|cc|.`,
 			mustAccept: []string{"a", "b", "c", "aa", "bb", "cc", "d", "e", "z"},
 		},
+		{
+			regexS:     "\\.",
+			mustAccept: []string{"."},
+		},
+		{
+			regexS:     "[abc]",
+			mustAccept: []string{"a", "b", "c"},
+		},
 	}
 	p := parser.NewParser()
 	for _, tc := range tt {
