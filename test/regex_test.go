@@ -114,6 +114,14 @@ func TestRegex(t *testing.T) {
 			regexS:     "[abc]",
 			mustAccept: []string{"a", "b", "c"},
 		},
+		{
+			regexS:     "[a-c]",
+			mustAccept: []string{"a", "b", "c"},
+		},
+		{
+			regexS:     "[0-2][1-3]",
+			mustAccept: []string{"01", "02", "11", "13", "22"},
+		},
 	}
 	p := parser.NewParser()
 	for _, tc := range tt {
