@@ -2,6 +2,7 @@ package parser
 
 import (
 	"errors"
+	"fmt"
 	"strconv"
 
 	"github.com/bogdan-deac/regex/ast"
@@ -247,20 +248,41 @@ func (p *parser) parseSet(s string) (Regex, error) {
 	return nil, nil
 }
 
+func (p *parser) parseRange(s string) (Regex, error) {
+	if p.index+1 >= len(s) || s[p.index+1] != '-' {
+		return nil, nil
+	}
+	rangeStart := s[p.index]
+	rangeEnd := s[p.index+2]
+	if rangeEnd < rangeStart {
+		return nil, fmt.Errorf("range start should not be less than range end %s", s[p.index:p.index+2])
+	}
+
+	or := ast.Or[generator.PrintableInt]{
+		Branches: []ast.Regex[generator.PrintableInt]{},
+	}
+
+	for c := rangeStart; c <= rangeEnd; c++ {
+		or.Branches = append(or.Branches, ast.Char[generator.PrintableInt]{
+			Value: rune(c),
+		})
+	}
+	p.index += 3
+	return or, nil
+
+}
 func (p *parser) parseSetAtom(s string) (Regex, error) {
-	regex, err := p.parseLiteral(s)
+	regex, err := p.parseRange(s)
 	if err != nil {
 		return nil, err
 	}
 	if regex != nil {
 		return regex, nil
 	}
-
-	// Ranges are not yet implemented
-	// regex, err = p.parseRange(s)
-	// if err != nil {
-	// 	return nil, err
-	// }
+	regex, err = p.parseLiteral(s)
+	if err != nil {
+		return nil, err
+	}
 
 	return regex, nil
 }
