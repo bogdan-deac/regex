@@ -1,6 +1,6 @@
 module github.com/bogdan-deac/regex
 
-go 1.24
+go 1.25
 
 require (
 	github.com/deckarep/golang-set/v2 v2.6.0
