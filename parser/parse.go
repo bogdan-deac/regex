@@ -2,10 +2,10 @@ package parser
 
 import (
 	"errors"
-	"fmt"
 	"strconv"
 
 	"github.com/bogdan-deac/regex/ast"
+	"github.com/bogdan-deac/regex/automata"
 	"github.com/bogdan-deac/regex/common/generator"
 )
 
@@ -211,78 +211,89 @@ func (p *parser) parseAtom(s string) (Regex, error) {
 	return regex, nil
 }
 func (p *parser) parseSet(s string) (Regex, error) {
-	if p.index < len(s) && s[p.index] == '[' {
-		p.inSet = true
-		p.index++
 
-		if p.index < len(s) && s[p.index] == '^' {
-			return nil, errors.New("negated character sets are not yet implemented")
-		}
-
-		regex, err := p.parseSetAtom(s)
-		if err != nil {
-			return nil, err
-		}
-		or := ast.Or[generator.PrintableInt]{
-			Branches: []ast.Regex[generator.PrintableInt]{
-				regex,
-			},
-		}
-		for {
-			newRegex, err := p.parseSetAtom(s)
-			if err != nil {
-				return nil, err
-			}
-			if newRegex != nil {
-				or.Branches = append(or.Branches, newRegex)
-			}
-			if p.index < len(s) && s[p.index] == ']' {
-				p.inSet = false
-				p.index++
-				break
-			}
-		}
-		return or, nil
-	}
-
-	return nil, nil
-}
-
-func (p *parser) parseRange(s string) (Regex, error) {
-	if p.index+1 >= len(s) || s[p.index+1] != '-' {
+	if p.index < len(s) && s[p.index] != '[' || p.index == len(s) {
 		return nil, nil
 	}
-	rangeStart := s[p.index]
-	rangeEnd := s[p.index+2]
-	if rangeEnd < rangeStart {
-		return nil, fmt.Errorf("range start should not be less than range end %s", s[p.index:p.index+2])
+	p.index++
+	if p.index < len(s) && s[p.index] == ']' {
+		return nil, errors.New("Detected empty character set in regex: []")
+	}
+	rangesToAdd := make([][]rune, 0)
+	rangesToRemove := make([][]rune, 0)
+	literalsToAdd := make([]rune, 0)
+	literalsToRemove := make([]rune, 0)
+	isNegated := false
+	for p.index < len(s) && s[p.index] != ']' {
+		// first, look for negation
+		if p.index < len(s) && s[p.index] == '^' {
+			if isNegated {
+				return nil, errors.New("Detected 2 negations in the same character set, invalid syntax")
+			}
+			isNegated = true
+			p.index++
+			if p.index < len(s) && s[p.index] == ']' {
+				return nil, errors.New("Detected useless negation in the character set")
+			}
+			continue
+		}
+		if p.index < len(s) && s[p.index] == '\\' {
+			p.index++
+		}
+		// from here on out we are guaranteed to have either a literal or a range
+		if p.index+1 < len(s) && s[p.index+1] == '-' {
+			// we have a range
+			if p.index+2 >= len(s) {
+				return nil, errors.New("Detected unclosed range at the end of the charater group")
+			}
+			rangeStart := s[p.index]
+			rangeEnd := s[p.index+2]
+			if isNegated {
+				rangesToRemove = append(rangesToRemove, automata.ASCIISet{rune(rangeStart), rune(rangeEnd)})
+			} else {
+				rangesToAdd = append(rangesToAdd, automata.ASCIISet{rune(rangeStart), rune(rangeEnd)})
+			}
+			p.index += 3
+			continue
+		}
+
+		if isNegated {
+			literalsToRemove = append(literalsToRemove, rune(s[p.index]))
+		} else {
+			literalsToAdd = append(literalsToAdd, rune(s[p.index]))
+		}
+		p.index++
+
+	}
+	if s[p.index] != ']' {
+		return nil, errors.New("Detected unclosed character set")
+	}
+	p.index++
+
+	finalRage := automata.ASCIISet{}
+	if isNegated && len(rangesToAdd) == 0 && len(literalsToAdd) == 0 {
+		finalRage = automata.ASCIIChars
+	}
+	for _, rangeToAdd := range rangesToAdd {
+		finalRage = finalRage.Union(rangeToAdd[0], rangeToAdd[1])
+	}
+	for _, literalToAdd := range literalsToAdd {
+		finalRage = finalRage.Add(literalToAdd)
+	}
+	for _, rangeToRemove := range rangesToRemove {
+		finalRage = finalRage.Difference(rangeToRemove[0], rangeToRemove[1])
+	}
+	for _, literalToRemove := range literalsToRemove {
+		finalRage = finalRage.Delete(literalToRemove)
 	}
 
-	or := ast.Or[generator.PrintableInt]{
-		Branches: []ast.Regex[generator.PrintableInt]{},
+	orExp := ast.Or[generator.PrintableInt]{
+		Branches: []Regex{},
 	}
-
-	for c := rangeStart; c <= rangeEnd; c++ {
-		or.Branches = append(or.Branches, ast.Char[generator.PrintableInt]{
-			Value: rune(c),
+	for _, c := range finalRage {
+		orExp.Branches = append(orExp.Branches, ast.Char[generator.PrintableInt]{
+			Value: c,
 		})
 	}
-	p.index += 3
-	return or, nil
-
-}
-func (p *parser) parseSetAtom(s string) (Regex, error) {
-	regex, err := p.parseRange(s)
-	if err != nil {
-		return nil, err
-	}
-	if regex != nil {
-		return regex, nil
-	}
-	regex, err = p.parseLiteral(s)
-	if err != nil {
-		return nil, err
-	}
-
-	return regex, nil
+	return orExp, nil
 }

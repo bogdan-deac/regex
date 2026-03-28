@@ -24,7 +24,7 @@ Wildcard     ::= "."
 
 Group        ::= "(" Alt ")"
 
-Set          ::= "[ Negation? SetAtom+ "]"
+Set          ::= "[ Negation? SetAtom+ "]" | "[ SetAtom+ Negation SetAtom+]"
 
 SetAtom      ::= Literal
                | Range

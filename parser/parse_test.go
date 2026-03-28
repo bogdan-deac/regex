@@ -159,6 +159,16 @@ func TestParse(t *testing.T) {
 				},
 			},
 		},
+		{
+			reS: "[a]",
+			expectedResult: ast.Or[generator.PrintableInt]{
+				Branches: []ast.Regex[generator.PrintableInt]{
+					ast.Char[generator.PrintableInt]{
+						Value: 'a',
+					},
+				},
+			},
+		},
 	}
 
 	p := NewParser()

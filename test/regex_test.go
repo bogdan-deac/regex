@@ -11,8 +11,9 @@ import (
 
 func TestRegex(t *testing.T) {
 	tt := []struct {
-		regexS     string
-		mustAccept []string
+		regexS        string
+		mustAccept    []string
+		mustNotAccept []string
 	}{
 		{
 			regexS:     "a",
@@ -122,6 +123,24 @@ func TestRegex(t *testing.T) {
 			regexS:     "[0-2][1-3]",
 			mustAccept: []string{"01", "02", "11", "13", "22"},
 		},
+		{
+			regexS:     "[a^b]|[b^a]",
+			mustAccept: []string{"a", "b"},
+		},
+		{
+			regexS:        "[a-z^A-Z]",
+			mustAccept:    []string{"a", "v", "z"},
+			mustNotAccept: []string{"A", "V", "Z"},
+		},
+		{
+			regexS:        "[a-z^b]",
+			mustAccept:    []string{"a", "c"},
+			mustNotAccept: []string{"b"},
+		},
+		{
+			regexS:     "[\\^\\]\\[]",
+			mustAccept: []string{"^", "[", "]"},
+		},
 	}
 	p := parser.NewParser()
 	for _, tc := range tt {
@@ -134,10 +153,18 @@ func TestRegex(t *testing.T) {
 		for _, s := range tc.mustAccept {
 			assert.Truef(t, dfa.Accepts([]automata.Symbol(s)), "Expected %s to match %s", tc.regexS, s)
 		}
+
+		for _, s := range tc.mustNotAccept {
+			assert.Falsef(t, dfa.Accepts([]automata.Symbol(s)), "Expected %s not to match %s", tc.regexS, s)
+		}
 		// whatever the DFA accepts, the minDFA must also accept
 		minDfa := dfa.Minimize()
 		for _, s := range tc.mustAccept {
 			assert.Truef(t, minDfa.Accepts([]automata.Symbol(s)), "Expected %s to match %s", tc.regexS, s)
+		}
+
+		for _, s := range tc.mustNotAccept {
+			assert.Falsef(t, minDfa.Accepts([]automata.Symbol(s)), "Expected %s not to match %s", tc.regexS, s)
 		}
 		// automata theory - the min DFA should have at most the same number of states as the DFA
 		assert.True(t, dfa.AllStates.Cardinality() >= minDfa.AllStates.Cardinality())
