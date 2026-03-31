@@ -7,7 +7,6 @@ import (
 
 	"github.com/bogdan-deac/regex/common/generator"
 	set "github.com/deckarep/golang-set/v2"
-	queue "github.com/oleiade/lane/v2"
 )
 
 type NFA[T StateLike] struct {
@@ -44,19 +43,20 @@ func (nfa *NFA[T]) EpsilonClosures() map[T]set.Set[T] {
 		epsilonClosures[state] = set.NewSet(state)
 	}
 	for state, epsStates := range nfa.EpsilonTransitions {
-		toCheck := queue.NewQueue(epsStates...)
+		toCheck := slices.Clone(epsStates)
 
 		visitedNodes := make(map[T]struct{})
 		epsilonClosures[state].Append(epsStates...)
 
-		for toCheck.Size() > 0 {
-			next, _ := toCheck.Dequeue()
+		for len(toCheck) > 0 {
+			next := toCheck[len(toCheck)-1]
+			toCheck = toCheck[:len(toCheck)-1]
 			visitedNodes[next] = struct{}{}
 			// iteratively build epsilon closure for all states that are reachable via epsilon transitions
 			for _, t := range nfa.EpsilonTransitions[next] {
 				if _, visited := visitedNodes[t]; !visited {
 					epsilonClosures[state].Add(t)
-					toCheck.Enqueue(t)
+					toCheck = append(toCheck, t)
 				}
 			}
 
@@ -138,14 +138,14 @@ func (nfa *NFA[T]) ToDFA(g generator.Generator[T]) *DFA[T] {
 		dfaFinalStates.Add(dfaInitialState)
 	}
 
-	// var leadsToSink bool
 	var mergedStateValue T
 
 	// use queue for keeping track of subsets of states
-	toProcess := queue.NewQueue(sliceISWC)
+	toProcess := [][]T{sliceISWC}
 
-	for toProcess.Size() > 0 {
-		currentStateSlice, _ := toProcess.Dequeue()
+	for len(toProcess) > 0 {
+		currentStateSlice := toProcess[len(toProcess)-1]
+		toProcess = toProcess[:len(toProcess)-1]
 		slices.Sort(currentStateSlice)
 		var originState T
 		if state, ok := mergeStates[fmt.Sprint(currentStateSlice)]; ok {
@@ -184,7 +184,7 @@ func (nfa *NFA[T]) ToDFA(g generator.Generator[T]) *DFA[T] {
 				if mergedStateValue, ok = mergeStates[fmt.Sprint(stateSlice)]; !ok {
 					mergedStateValue = g.Generate()
 					mergeStates[fmt.Sprint(stateSlice)] = mergedStateValue
-					toProcess.Enqueue(stateSlice)
+					toProcess = append(toProcess, stateSlice)
 				}
 
 				// add newly generated state to all states
