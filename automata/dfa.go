@@ -61,9 +61,9 @@ func (dfa *DFA[T]) String() string {
 	var sb strings.Builder
 
 	sb.WriteString(fmt.Sprintf("[Alphabet] %v\n", dfa.Alphabet.ToSlice()))
-	sb.WriteString("[Initial State] " + dfa.InitialState.String() + "\n")
-	sb.WriteString(fmt.Sprintf("[Final States] %v", dfa.FinalStates.ToSlice()) + "\n")
-	sb.WriteString(fmt.Sprintf("[ALL States] %v", dfa.AllStates.ToSlice()) + "\n")
+	sb.WriteString("[Initial State] %s\n" + dfa.InitialState.String())
+	sb.WriteString(fmt.Sprintf("[Final States] %v\n", dfa.FinalStates.ToSlice()))
+	sb.WriteString(fmt.Sprintf("[ALL States] %v\n", dfa.AllStates.ToSlice()))
 	for origin, mapping := range dfa.Delta {
 		for sym, dest := range mapping {
 			sb.WriteString(fmt.Sprintf("%s -> %d -> %s\n", origin.String(), sym, dest))

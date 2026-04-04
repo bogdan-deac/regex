@@ -69,9 +69,9 @@ func (nfa *NFA[T]) String() string {
 	var sb strings.Builder
 
 	sb.WriteString(fmt.Sprintf("[Alphabet] %v\n", nfa.Alphabet.ToSlice()))
-	sb.WriteString("[Initial State] " + nfa.IntialState.String() + "\n")
-	sb.WriteString(fmt.Sprintf("[Final States] %v", nfa.FinalStates.ToSlice()) + "\n")
-	sb.WriteString(fmt.Sprintf("[ALL States] %v", nfa.AllStates.ToSlice()) + "\n")
+	sb.WriteString("[Initial State] %s\n" + nfa.IntialState.String())
+	sb.WriteString(fmt.Sprintf("[Final States] %v\n", nfa.FinalStates.ToSlice()))
+	sb.WriteString(fmt.Sprintf("[ALL States] %v\n", nfa.AllStates.ToSlice()))
 	sb.WriteString("[DELTA]\n")
 	for origin, mapping := range nfa.Delta {
 		for sym, dest := range mapping {
@@ -80,7 +80,7 @@ func (nfa *NFA[T]) String() string {
 	}
 	sb.WriteString("[EPS_TRANSITIONS]\n")
 	for start, end := range nfa.EpsilonTransitions {
-		sb.WriteString(fmt.Sprintf("%v -> %v", start, end) + "\n")
+		sb.WriteString(fmt.Sprintf("%v -> %v\n", start, end))
 	}
 	return sb.String()
 }
