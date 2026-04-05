@@ -17,7 +17,7 @@ Regex is a toy regex implementation based on automata theory. The pipleine has t
 * grouping - `(a|b)*`
 * escaped characters - `\||\*`
 * wildcards - `.*`
-* character sets and ranges - `[abc]|[d-z^g-m]`
+* character sets and ranges - `[abc]|[^1-35-6]`
 
 Note - in this implementation, grouping is non-capturing.
 Only suports ASCII characters

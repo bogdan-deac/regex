@@ -124,18 +124,20 @@ func TestRegex(t *testing.T) {
 			mustAccept: []string{"01", "02", "11", "13", "22"},
 		},
 		{
-			regexS:     "[a^b]|[b^a]",
+			regexS:     "[1-23-4]",
+			mustAccept: []string{"1", "2", "3", "4"},
+		},
+		{
+			regexS:     "[^b]|[^a]",
 			mustAccept: []string{"a", "b"},
 		},
 		{
-			regexS:        "[a-z^A-Z]",
-			mustAccept:    []string{"a", "v", "z"},
-			mustNotAccept: []string{"A", "V", "Z"},
+			regexS:     "[a-z^A-Z]",
+			mustAccept: []string{"a", "v", "z", "A", "V", "Z"},
 		},
 		{
-			regexS:        "[a-z^b]",
-			mustAccept:    []string{"a", "c"},
-			mustNotAccept: []string{"b"},
+			regexS:     "[a-z^b]",
+			mustAccept: []string{"a", "c", "^", "b"},
 		},
 		{
 			regexS:     "[\\^\\]\\[]",
