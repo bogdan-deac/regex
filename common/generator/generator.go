@@ -18,5 +18,7 @@ func (i *PrintableInt) Generate() PrintableInt {
 	return toRet
 }
 func NewIntGenerator() Generator[PrintableInt] {
-	return new(PrintableInt)
+	// by using 1 as the default start state, we can optimize dfa construction by treating 0 as a non-transition
+	var start PrintableInt = 1
+	return new(start)
 }

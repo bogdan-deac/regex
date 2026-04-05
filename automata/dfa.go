@@ -113,7 +113,6 @@ func (dfa *DFA[T]) Minimize() *DFA[T] {
 	// the partitions are groupings of identical states from the original DFA
 	partitions := []set.Set[T]{dfa.FinalStates, dfa.AllStates.Difference(dfa.FinalStates)}
 	changed := true
-	alphabetSymbols := dfa.Alphabet.ToSlice()
 	// wait until the number of partitions stablizes
 	for changed {
 		changed = false
@@ -132,15 +131,10 @@ func (dfa *DFA[T]) Minimize() *DFA[T] {
 			// iterate through all states in the current partition
 			for state := range partition.Iter() {
 				// build up key for merged states
-				signature := make([]int, dfa.Alphabet.Cardinality())
+				signature := make([]int, AlphabetSize)
 				// we want to see how the state behaves for all symbols in the alphabet
-				for i, sym := range alphabetSymbols {
-					if nextState, ok := dfa.Delta[state][sym]; ok {
-						signature[i] = stateToPartitionMap[nextState]
-						continue
-					}
-					// if no transition, then mark that as well
-					signature[i] = -1
+				for sym, nextState := range dfa.Delta[state] {
+					signature[sym] = stateToPartitionMap[nextState]
 				}
 
 				key := fmt.Sprint(signature)
