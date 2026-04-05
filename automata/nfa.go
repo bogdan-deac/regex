@@ -38,7 +38,7 @@ func NewNFA[T StateLike](
 
 // build epsilon closures for each state. Each epsilon closure contains the originating state
 func (nfa *NFA[T]) EpsilonClosures() map[T]set.Set[T] {
-	epsilonClosures := make(map[T]set.Set[T], len(nfa.EpsilonTransitions))
+	epsilonClosures := make(map[T]set.Set[T], nfa.AllStates.Cardinality())
 	for _, state := range nfa.AllStates.ToSlice() {
 		epsilonClosures[state] = set.NewSet(state)
 	}
@@ -144,16 +144,14 @@ func (nfa *NFA[T]) ToDFA(g generator.Generator[T]) *DFA[T] {
 	toProcess := [][]T{sliceISWC}
 
 	for len(toProcess) > 0 {
+		// pop
 		currentStateSlice := toProcess[len(toProcess)-1]
 		toProcess = toProcess[:len(toProcess)-1]
-		slices.Sort(currentStateSlice)
-		var originState T
-		if state, ok := mergeStates[fmt.Sprint(currentStateSlice)]; ok {
-			originState = state
-		} else {
-			originState = g.Generate()
-			mergeStates[fmt.Sprint(currentStateSlice)] = originState
-		}
+		currentStateSliceSignature := fmt.Sprint(currentStateSlice)
+
+		// guaranteed to be in the merge states, we're checking for that
+		originState := mergeStates[currentStateSliceSignature]
+
 		if dfaDelta[originState] == nil {
 			dfaDelta[originState] = make(map[Symbol]T)
 		}
@@ -173,10 +171,12 @@ func (nfa *NFA[T]) ToDFA(g generator.Generator[T]) *DFA[T] {
 				}
 
 				for _, st := range symTransitions {
-					allTransitionsWithEps.Append(epsClosures[st].ToSlice()...)
+					allTransitionsWithEps = allTransitionsWithEps.Union(epsClosures[st])
 				}
 
 				stateSlice := allTransitionsWithEps.ToSlice()
+
+				// sort it to process it properly
 				slices.Sort(stateSlice)
 
 				// if the set of states has already been processed - don't requeue it

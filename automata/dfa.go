@@ -113,10 +113,15 @@ func (dfa *DFA[T]) Minimize() *DFA[T] {
 	// the partitions are groupings of identical states from the original DFA
 	partitions := []set.Set[T]{dfa.FinalStates, dfa.AllStates.Difference(dfa.FinalStates)}
 	changed := true
+
+	// this will be used for splitting the sets, but setting it here to allocate it only once
+	signature := make([]int, AlphabetSize)
+
+	newPartitions := make([]set.Set[T], 0, len(partitions))
+
 	// wait until the number of partitions stablizes
 	for changed {
 		changed = false
-		newPartitions := make([]set.Set[T], 0, len(partitions))
 
 		stateToPartitionMap := make(map[T]int)
 		for i, partition := range partitions {
@@ -131,8 +136,7 @@ func (dfa *DFA[T]) Minimize() *DFA[T] {
 			// iterate through all states in the current partition
 			for state := range partition.Iter() {
 				// build up key for merged states
-				signature := make([]int, AlphabetSize)
-				// we want to see how the state behaves for all symbols in the alphabet
+				// we want to see how the state behaves for all relevant transitions
 				for sym, nextState := range dfa.Delta[state] {
 					signature[sym] = stateToPartitionMap[nextState]
 				}
@@ -143,8 +147,12 @@ func (dfa *DFA[T]) Minimize() *DFA[T] {
 				}
 				// at the end, we know the partition where that state leads for each symbol
 				// For example 1 -> "a" -> 2, 1->"b"->1 with alphabet abc has the following
-				// signature: [2,1,-1]
+				// signature: [2,1,0]
 				subPartitions[key].Add(state)
+			}
+			// zero out the key
+			for i := range signature {
+				signature[i] = 0
 			}
 
 			// all states that have transitions inside the same partitions can form their own partition
@@ -154,6 +162,8 @@ func (dfa *DFA[T]) Minimize() *DFA[T] {
 			changed = len(newPartitions) != len(partitions)
 		}
 		partitions = newPartitions
+		// clear out the partitions - preuse the already allocated slice
+		newPartitions = newPartitions[:0]
 	}
 
 	// create mapping based on partition groups - no need to generate new states, take a random one
@@ -173,8 +183,8 @@ func (dfa *DFA[T]) Minimize() *DFA[T] {
 		newFinalStates.Add(stateMap[st])
 	}
 	newAllStates := set.NewSet[T]()
-	for st := range dfa.AllStates.Iter() {
-		newAllStates.Add(stateMap[st])
+	for _, st := range stateMap {
+		newAllStates.Add(st)
 	}
 	newDelta := make(map[T]map[Symbol]T)
 	for originState, symMapping := range dfa.Delta {
