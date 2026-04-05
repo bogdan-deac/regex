@@ -15,6 +15,7 @@ type StateLike interface {
 type ASCIISet []rune
 
 const Wildcard = -1
+const AlphabetSize = 128
 
 // ASCIIChars contains all ASCII characters (0–127).
 var ASCIIChars = ASCIISet{
