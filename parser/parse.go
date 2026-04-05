@@ -2,6 +2,8 @@ package parser
 
 import (
 	"errors"
+	"fmt"
+	"slices"
 	"strconv"
 
 	"github.com/bogdan-deac/regex/ast"
@@ -224,23 +226,17 @@ func (p *parser) parseSet(s string) (Regex, error) {
 	literalsToAdd := make([]rune, 0)
 	literalsToRemove := make([]rune, 0)
 	isNegated := false
-	for p.index < len(s) && s[p.index] != ']' {
-		// first, look for negation
-		if p.index < len(s) && s[p.index] == '^' {
-			if isNegated {
-				return nil, errors.New("Detected 2 negations in the same character set, invalid syntax")
-			}
-			isNegated = true
-			p.index++
-			if p.index < len(s) && s[p.index] == ']' {
-				return nil, errors.New("Detected useless negation in the character set")
-			}
-			continue
+	if p.index < len(s) && s[p.index] == '^' {
+		isNegated = true
+		p.index++
+		if p.index < len(s) && s[p.index] == ']' {
+			return nil, errors.New("Detected useless negation in the character set")
 		}
+	}
+	for p.index < len(s) && s[p.index] != ']' {
 		if p.index < len(s) && s[p.index] == '\\' {
 			p.index++
 		}
-		// from here on out we are guaranteed to have either a literal or a range
 		if p.index+1 < len(s) && s[p.index+1] == '-' {
 			// we have a range
 			if p.index+2 >= len(s) {
@@ -248,6 +244,9 @@ func (p *parser) parseSet(s string) (Regex, error) {
 			}
 			rangeStart := s[p.index]
 			rangeEnd := s[p.index+2]
+			if rangeStart > rangeEnd {
+				return nil, fmt.Errorf("Detected invalid range between %q and %q", rangeStart, rangeEnd)
+			}
 			if isNegated {
 				rangesToRemove = append(rangesToRemove, automata.ASCIISet{rune(rangeStart), rune(rangeEnd)})
 			} else {
@@ -271,20 +270,22 @@ func (p *parser) parseSet(s string) (Regex, error) {
 	p.index++
 
 	finalRage := automata.ASCIISet{}
-	if isNegated && len(rangesToAdd) == 0 && len(literalsToAdd) == 0 {
-		finalRage = automata.ASCIIChars
-	}
-	for _, rangeToAdd := range rangesToAdd {
-		finalRage = finalRage.Union(rangeToAdd[0], rangeToAdd[1])
-	}
-	for _, literalToAdd := range literalsToAdd {
-		finalRage = finalRage.Add(literalToAdd)
-	}
-	for _, rangeToRemove := range rangesToRemove {
-		finalRage = finalRage.Difference(rangeToRemove[0], rangeToRemove[1])
-	}
-	for _, literalToRemove := range literalsToRemove {
-		finalRage = finalRage.Delete(literalToRemove)
+
+	if isNegated {
+		finalRage = slices.Clone(automata.ASCIIChars)
+		for _, rangeToRemove := range rangesToRemove {
+			finalRage = finalRage.Difference(rangeToRemove[0], rangeToRemove[1])
+		}
+		for _, literalToRemove := range literalsToRemove {
+			finalRage = finalRage.Delete(literalToRemove)
+		}
+	} else {
+		for _, rangeToAdd := range rangesToAdd {
+			finalRage = finalRage.Union(rangeToAdd[0], rangeToAdd[1])
+		}
+		for _, literalToAdd := range literalsToAdd {
+			finalRage = finalRage.Add(literalToAdd)
+		}
 	}
 
 	orExp := ast.Or[generator.PrintableInt]{
